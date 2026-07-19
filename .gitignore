@@ -1,0 +1,41 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+.reference_limitless.html
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+# locally-uploaded images (production uses Vercel Blob)
+/public/uploads
+
+# NOTE: the /drizzle folder holds generated migrations and IS committed —
+# it's needed to run `npm run db:migrate` against the production database.
+
+# Claude Code local machine state
+.claude/settings.local.json

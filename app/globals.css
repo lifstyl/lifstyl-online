@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ───────────────────────────────────────────────────────────
+   Design tokens & base styles ported from github.com/lifstyl/limitless
+   (the real source for limitlesslifstyl.com). Colors also live in
+   tailwind.config.ts; kept here as CSS vars for raw CSS usage.
+   ─────────────────────────────────────────────────────────── */
+:root {
+  --white: #f7f7f7;
+  --pure-white: #ffffff;
+  --navy: #1c3664;
+  --navy-deep: #12213f;
+  --black: #333333;
+  --gold: #bf9423;
+  --gold-light: #d9b45a;
+  --text-body: #55565c;
+  --text-muted: #8a8b91;
+  --border: #e4e3df;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-dm-sans), "DM Sans", sans-serif;
+  color: var(--black);
+  background: var(--white);
+  /* clip (not hidden) prevents sideways scroll without turning body into a
+     scroll container, which would break vertical page scrolling. */
+  overflow-x: clip;
+}
+
+h1,
+h2,
+h3,
+.serif {
+  font-family: var(--font-playfair), "Playfair Display", serif;
+  font-weight: 400;
+}
+
+.accent-italic {
+  font-family: var(--font-playfair), "Playfair Display", serif;
+  font-style: italic;
+  color: var(--gold);
+  font-weight: 500;
+}
+
+/* Section eyebrow tag: "── THE LIMITLESS PLAN ──" style */
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.section-tag::before {
+  content: "";
+  width: 32px;
+  height: 1px;
+  background: var(--gold);
+  display: inline-block;
+}
+
+/* Gold CTA button, matches .btn-connect */
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gold);
+  color: var(--pure-white);
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+  padding: 13px 26px;
+  font-family: var(--font-dm-sans), "DM Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.25s, color 0.25s, transform 0.15s;
+}
+.btn-gold:hover {
+  background: transparent;
+  color: var(--gold);
+  transform: translateY(-1px);
+}
+
+/* Outline variant on dark grounds */
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  color: var(--pure-white);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+  padding: 13px 26px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.25s, color 0.25s, border-color 0.25s;
+}
+.btn-outline:hover {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--pure-white);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
