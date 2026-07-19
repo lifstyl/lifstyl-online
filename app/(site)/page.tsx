@@ -1,4 +1,5 @@
 import { HeroCarousel } from "@/components/hero-carousel";
+import { HeroWaves } from "@/components/hero-waves";
 import { CalendarEmbed } from "@/components/calendar-embed";
 import {
   getCarouselImages,
@@ -25,7 +26,8 @@ export default async function HomePage() {
       {/* ── HERO ─────────────────────────────────────────── */}
       <section className="relative flex min-h-[100svh] items-center justify-center overflow-hidden px-6 text-center">
         <HeroCarousel images={images} />
-        <div className="max-w-4xl">
+        <HeroWaves />
+        <div className="relative z-10 max-w-4xl">
           <h1 className="text-balance font-serif text-4xl leading-tight text-pure-white sm:text-6xl lg:text-7xl">
             {content.heroHeading ?? "WELCOME TO LIFSTYL.ONLINE"}
           </h1>

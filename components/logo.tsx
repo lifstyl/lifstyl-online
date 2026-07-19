@@ -1,20 +1,26 @@
+import Image from "next/image";
+import logo from "@/public/lifstyl-logo.png";
+
 /**
- * Text-based stand-in for the Lifstyl wordmark, styled to match the brand's
- * navy badge treatment. Drop the real logo PNG/SVG into /public and swap the
- * inner markup for an <Image> when available.
+ * The Lifstyl "lifstyl / real estate" wordmark (white, transparent PNG).
+ * Designed to sit inside a navy badge, matching limitlesslifstyl.com.
+ * `height` controls the rendered size; width scales to the logo's aspect ratio.
  */
-export function Logo({ className = "" }: { className?: string }) {
+export function Logo({
+  height = 34,
+  className = "",
+}: {
+  height?: number;
+  className?: string;
+}) {
   return (
-    <span
-      className={`inline-flex flex-col items-start leading-none ${className}`}
-      aria-label="Lifstyl Real Estate"
-    >
-      <span className="font-serif text-2xl tracking-tight text-pure-white">
-        lifstyl
-      </span>
-      <span className="text-[8px] font-semibold uppercase tracking-[0.35em] text-gold-light">
-        real estate
-      </span>
-    </span>
+    <Image
+      src={logo}
+      alt="Lifstyl Real Estate"
+      height={height}
+      priority
+      className={`w-auto ${className}`}
+      style={{ height, width: "auto" }}
+    />
   );
 }
