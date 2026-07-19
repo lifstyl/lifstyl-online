@@ -24,7 +24,18 @@ export async function saveImage(file: File): Promise<string> {
     return blob.url;
   }
 
-  // Local-dev fallback.
+  // `VERCEL` is set on every Vercel deployment (prod, preview, and `vercel dev`).
+  // Its filesystem is read-only outside /tmp, so the disk fallback below would
+  // fail there with a confusing ENOENT — fail loudly instead with the actual fix.
+  if (process.env.VERCEL) {
+    throw new Error(
+      "Image upload failed: BLOB_READ_WRITE_TOKEN is not set. In the Vercel " +
+        "dashboard, connect a Blob store to this project (Storage tab) and " +
+        "redeploy — env var changes only take effect on the next deployment."
+    );
+  }
+
+  // Local-dev fallback (no Blob token configured locally).
   const bytes = Buffer.from(await file.arrayBuffer());
   const dir = path.join(process.cwd(), "public", "uploads");
   await mkdir(dir, { recursive: true });
