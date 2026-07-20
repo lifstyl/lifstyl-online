@@ -4,13 +4,12 @@ import { useEffect, useState } from "react";
 import type { CarouselImage } from "@/lib/db/schema";
 
 /**
- * Full-bleed hero background carousel. Cross-fades between images from the DB.
- * Falls back to a navy gradient when no images are configured, so the hero
- * text is always legible.
+ * Contained, rotating photo card shown below the hero's "SEE WHAT'S NEW"
+ * banner — one image at a time, cross-fading. Editable via Admin → Home.
+ * (Not a full-bleed hero background — the hero itself uses HeroWaves only.)
  */
 export function HeroCarousel({ images }: { images: CarouselImage[] }) {
   const [active, setActive] = useState(0);
-  const hasImages = images.length > 0;
 
   useEffect(() => {
     if (images.length < 2) return;
@@ -21,33 +20,40 @@ export function HeroCarousel({ images }: { images: CarouselImage[] }) {
     return () => clearInterval(id);
   }, [images.length]);
 
+  if (images.length === 0) {
+    return (
+      <div className="mx-auto mt-10 flex aspect-[21/9] w-full max-w-3xl flex-col items-center justify-center rounded-sm border border-dashed border-white/25 bg-white/5 text-center">
+        <p className="text-sm text-white/60">
+          No photos yet — add some from Admin → Home.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="absolute inset-0 -z-10 overflow-hidden bg-navy-deep">
-      {hasImages &&
-        images.map((img, i) => (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            key={img.id}
-            src={img.url}
-            alt={img.altText}
-            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
-              i === active ? "opacity-100" : "opacity-0"
-            }`}
-          />
-        ))}
-      {/* Navy scrim so the headline stays readable over any photo */}
-      <div className="absolute inset-0 bg-gradient-to-b from-navy-deep/80 via-navy/55 to-navy-deep/85" />
+    <div className="relative mx-auto mt-10 aspect-[21/9] w-full max-w-3xl overflow-hidden rounded-sm border border-white/15 shadow-2xl">
+      {images.map((img, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={img.id}
+          src={img.url}
+          alt={img.altText}
+          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
+            i === active ? "opacity-100" : "opacity-0"
+          }`}
+        />
+      ))}
 
       {images.length > 1 && (
-        <div className="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 gap-2">
+        <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-2">
           {images.map((img, i) => (
             <button
               key={img.id}
               type="button"
               aria-label={`Show slide ${i + 1}`}
               onClick={() => setActive(i)}
-              className={`h-2 rounded-full transition-all ${
-                i === active ? "w-6 bg-gold" : "w-2 bg-white/50 hover:bg-white/80"
+              className={`h-1.5 rounded-full transition-all ${
+                i === active ? "w-5 bg-gold" : "w-1.5 bg-white/60 hover:bg-white/90"
               }`}
             />
           ))}

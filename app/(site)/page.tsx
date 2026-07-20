@@ -24,10 +24,15 @@ export default async function HomePage() {
   return (
     <>
       {/* ── HERO ─────────────────────────────────────────── */}
-      <section className="relative flex min-h-[100svh] items-center justify-center overflow-hidden px-6 text-center">
-        <HeroCarousel images={images} />
+      <section
+        className="relative flex min-h-[100svh] flex-col items-center justify-center overflow-hidden px-6 py-32 text-center"
+        style={{
+          background:
+            "linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 55%, #0d1a33 100%)",
+        }}
+      >
         <HeroWaves />
-        <div className="relative z-10 max-w-4xl">
+        <div className="relative z-10 w-full max-w-4xl">
           <h1 className="text-balance font-serif text-4xl leading-tight text-pure-white sm:text-6xl lg:text-7xl">
             {content.heroHeading ?? "WELCOME TO LIFSTYL.ONLINE"}
           </h1>
@@ -39,6 +44,7 @@ export default async function HomePage() {
               </span>
             </div>
           )}
+          <HeroCarousel images={images} />
         </div>
       </section>
 
