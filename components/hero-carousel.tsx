@@ -31,7 +31,7 @@ export function HeroCarousel({ images }: { images: CarouselImage[] }) {
   }
 
   return (
-    <div className="relative mx-auto mt-10 h-[320px] w-full max-w-3xl overflow-hidden rounded-sm border border-white/15 shadow-2xl sm:h-[420px] md:h-[480px]">
+    <div className="relative mx-auto mt-10 h-[320px] w-full max-w-3xl overflow-hidden sm:h-[420px] md:h-[480px]">
       {images.map((img, i) => (
         // Full image shown uncropped (object-contain); any letterbox gap
         // shows the hero's own navy gradient behind this transparent box.
