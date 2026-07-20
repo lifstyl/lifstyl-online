@@ -151,7 +151,10 @@ export function HeroWaves() {
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 -z-[5] h-full w-full"
+      // Non-negative z-index on purpose: negative z-index here would bubble
+      // up past the hero section (which has no stacking context of its own)
+      // to the document root and paint behind the section's own background.
+      className="pointer-events-none absolute inset-0 z-0 h-full w-full"
     />
   );
 }

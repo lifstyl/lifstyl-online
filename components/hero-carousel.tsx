@@ -22,7 +22,7 @@ export function HeroCarousel({ images }: { images: CarouselImage[] }) {
 
   if (images.length === 0) {
     return (
-      <div className="mx-auto mt-10 flex aspect-[21/9] w-full max-w-3xl flex-col items-center justify-center rounded-sm border border-dashed border-white/25 bg-white/5 text-center">
+      <div className="mx-auto mt-10 flex h-[320px] w-full max-w-3xl flex-col items-center justify-center rounded-sm border border-dashed border-white/25 bg-white/5 text-center sm:h-[420px] md:h-[480px]">
         <p className="text-sm text-white/60">
           No photos yet — add some from Admin → Home.
         </p>
@@ -31,14 +31,16 @@ export function HeroCarousel({ images }: { images: CarouselImage[] }) {
   }
 
   return (
-    <div className="relative mx-auto mt-10 aspect-[21/9] w-full max-w-3xl overflow-hidden rounded-sm border border-white/15 shadow-2xl">
+    <div className="relative mx-auto mt-10 h-[320px] w-full max-w-3xl overflow-hidden rounded-sm border border-white/15 shadow-2xl sm:h-[420px] md:h-[480px]">
       {images.map((img, i) => (
+        // Full image shown uncropped (object-contain); any letterbox gap
+        // shows the hero's own navy gradient behind this transparent box.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={img.id}
           src={img.url}
           alt={img.altText}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
+          className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-1000 ${
             i === active ? "opacity-100" : "opacity-0"
           }`}
         />
