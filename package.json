@@ -12,6 +12,7 @@
     "db:seed": "tsx lib/db/seed.ts",
     "agents:import": "tsx lib/db/import-agents.ts",
     "agents:check": "tsx lib/db/check-agents.ts",
+    "prod:agents": "tsx lib/db/setup-prod.ts",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
