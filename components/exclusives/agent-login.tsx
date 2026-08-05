@@ -62,12 +62,14 @@ export function AgentLogin({ error }: { error?: string }) {
               name="phone"
               type="password"
               required
+              inputMode="numeric"
+              pattern="[0-9]*"
               autoComplete="current-password"
-              placeholder="(859) 555-1212"
+              placeholder="8595551212"
               className="w-full rounded-sm border border-border bg-white px-3 py-2.5 text-sm text-black outline-none focus:border-gold"
             />
             <span className="text-xs text-text-muted">
-              Dashes and parentheses don&apos;t matter.
+              Numbers only — no dashes, spaces, or parentheses.
             </span>
           </label>
           <SubmitButton className="mt-2 w-full">Sign In</SubmitButton>

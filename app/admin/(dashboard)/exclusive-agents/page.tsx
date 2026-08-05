@@ -22,8 +22,18 @@ export default async function AdminExclusiveAgentsPage() {
           <Field label="Name" hint="Exactly how they'll type it when signing in (capitalisation doesn't matter).">
             <input name="name" required className={inputClass} />
           </Field>
-          <Field label="Phone number" hint="This is their password. Dashes and parentheses are fine.">
-            <input name="phone" required className={inputClass} placeholder="(859) 555-1212" />
+          <Field
+            label="Phone number"
+            hint="This is their password. Numbers only — no dashes, spaces, or parentheses."
+          >
+            <input
+              name="phone"
+              required
+              inputMode="numeric"
+              pattern="[0-9]*"
+              className={inputClass}
+              placeholder="8595551212"
+            />
           </Field>
           <div>
             <SubmitButton>Add agent</SubmitButton>
@@ -75,8 +85,10 @@ export default async function AdminExclusiveAgentsPage() {
                   <input
                     name="phone"
                     required
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     className={inputClass}
-                    placeholder="(859) 555-1212"
+                    placeholder="8595551212"
                   />
                 </Field>
               </div>
