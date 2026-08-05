@@ -42,14 +42,30 @@ function run(script: string, args: string[], env: Record<string, string>) {
 function main() {
   console.log("\n─── Lifstyl production setup ───\n");
 
-  if (!existsSync(ENV_FILE)) {
-    fail(
-      `Can't find ${ENV_FILE}.\n\n` +
-        `  Download your production settings first:\n\n` +
-        `    npx vercel link          (pick the lifstyl-online project)\n` +
-        `    npx vercel env pull ${ENV_FILE}\n\n` +
-        `  Then run this again:  npm run prod:agents`
+  // Pull the credentials ourselves, always from the production environment.
+  // `vercel env pull` defaults to *development*, which on this project holds
+  // no values (everything is scoped to Production and Preview) — that silently
+  // points the migration at the wrong place, which is exactly how the live
+  // database ended up missing columns the app expects.
+  console.log("Fetching production settings from Vercel…");
+  try {
+    execFileSync(
+      "npx",
+      ["vercel", "env", "pull", ENV_FILE, "--environment=production", "--yes"],
+      { stdio: "inherit" }
     );
+  } catch {
+    fail(
+      "Couldn't download settings from Vercel.\n\n" +
+        "  If you haven't connected this folder to the project yet, run:\n" +
+        "    npx vercel login\n" +
+        "    npx vercel link       (choose the lifstyl-online project)\n\n" +
+        "  Then run this again:  npm run prod:agents"
+    );
+  }
+
+  if (!existsSync(ENV_FILE)) {
+    fail(`Vercel didn't create ${ENV_FILE}. Try 'npx vercel link' first.`);
   }
 
   // override:true — these production values must win over any local .env.
@@ -96,16 +112,21 @@ function main() {
 
   const env = { POSTGRES_URL: url, AUTH_SECRET: secret };
 
-  console.log("── Step 1/3 · updating database structure ──");
+  console.log("── Step 1/4 · updating database structure ──");
   run("lib/db/migrate.ts", [], env);
 
-  console.log("\n── Step 2/3 · importing agents ──");
+  // Confirm the columns actually landed in *this* database before importing
+  // into it — otherwise a migration that ran somewhere else looks like success.
+  console.log("\n── Step 2/4 · confirming the update reached this database ──");
+  run("lib/db/check-agents.ts", ["--structure-only"], env);
+
+  console.log("── Step 3/4 · importing agents ──");
   run("lib/db/import-agents.ts", rosters, {
     ...env,
     MANAGER_PHONE,
   });
 
-  console.log("── Step 3/3 · verifying sign-in ──");
+  console.log("── Step 4/4 · verifying sign-in ──");
   run("lib/db/check-agents.ts", [MANAGER_PHONE], env);
 
   console.log("Done. Try signing in on the live site.\n");

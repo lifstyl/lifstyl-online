@@ -39,3 +39,4 @@ yarn-error.log*
 
 # Claude Code local machine state
 .claude/settings.local.json
+.env*

@@ -16,7 +16,11 @@ import { normalizePhone, phoneLookupKey } from "../phone";
  * Never prints or stores a phone number.
  */
 async function main() {
-  const phoneArg = process.argv.slice(2).find((a) => !a.startsWith("-"));
+  const args = process.argv.slice(2);
+  const phoneArg = args.find((a) => !a.startsWith("-"));
+  // Used right after a migration, when an empty roster is expected and fine —
+  // we only want to know the table and columns exist in *this* database.
+  const structureOnly = args.includes("--structure-only");
   const url = process.env.POSTGRES_URL;
   if (!url) throw new Error("POSTGRES_URL is not set.");
 
@@ -57,6 +61,11 @@ async function main() {
   const [{ count }] = await sql<{ count: number }[]>`
     SELECT count(*)::int AS count FROM agents`;
   console.log(`agents rows: ${count}`);
+  if (structureOnly) {
+    console.log("✓ structure looks correct in this database.\n");
+    await sql.end();
+    return;
+  }
   if (count === 0) {
     console.error(
       "\n✗ The roster is empty — nobody can sign in.\n" +
