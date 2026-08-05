@@ -18,9 +18,15 @@ export const authConfig = {
   callbacks: {
     jwt({ token, user }) {
       if (user) {
-        const u = user as { role?: string; agentId?: number; name?: string | null };
+        const u = user as {
+          role?: string;
+          agentId?: number;
+          name?: string | null;
+          manageAll?: boolean;
+        };
         token.role = u.role;
         token.agentId = u.agentId;
+        token.manageAll = u.manageAll;
         token.name = u.name ?? token.name;
       }
       return token;
@@ -30,6 +36,9 @@ export const authConfig = {
         (session.user as { role?: string }).role = token.role as string | undefined;
         (session.user as { agentId?: number }).agentId = token.agentId as
           | number
+          | undefined;
+        (session.user as { manageAll?: boolean }).manageAll = token.manageAll as
+          | boolean
           | undefined;
       }
       return session;

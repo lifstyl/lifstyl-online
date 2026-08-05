@@ -31,13 +31,39 @@ Office Exclusives screens (all listings, and who can sign in).
 | | Signs in at | Credential | Can do |
 |---|---|---|---|
 | **You (admin)** | `/admin/login` | Email + password | Everything, including editing/removing any listing |
-| **Agents** | `/office-exclusives` | Name + phone number | Post listings; edit/remove only their own |
+| **Agents** | `/office-exclusives` | Phone number only | Post listings; edit/remove only their own |
+
+Agents sign in with just their phone number — their name is looked up and shown
+once they're in. Numbers are entered as plain digits (`8595551212`).
 
 Agents are managed from **Admin → Exclusive Agents**. An agent's phone number
 *is* their password, so it's stored only as a bcrypt hash and never displayed
 anywhere on the site — the admin screen shows just the last 4 digits so you can
 tell which number they were set up with. "Revoke access" blocks sign-in while
 keeping their listings; "Delete" removes the agent and their listings.
+
+**Manager agents.** "Make manager" lets an agent edit or remove *any* listing on
+the board. It grants nothing in `/admin` — that stays behind the email +
+password login, so board management never becomes reachable with just a phone
+number.
+
+### Importing the agent roster
+
+```bash
+# One CSV of "Name,Phone" per sheet — Google Sheets exports one sheet at a time,
+# so pass each exported tab as its own file and they're merged into one roster.
+MANAGER_PHONE=8599485512 npm run agents:import -- "roster-sheet1.csv" "roster-sheet2.csv"
+```
+
+Safe to re-run: agents are matched on phone number, so existing ones have their
+name refreshed rather than being duplicated, and their listings are untouched.
+The import aborts if the roster has the same number on two agents, since the
+phone number is the credential and must be unique.
+
+> Phone numbers are found at sign-in via a peppered SHA-256 lookup key
+> (`lib/phone.ts`) rather than by scanning every bcrypt hash — that's a ~96 ms
+> sign-in instead of ~7 s across a 110-agent roster. The pepper is `AUTH_SECRET`,
+> so **rotating `AUTH_SECRET` invalidates the keys** — re-run the import after.
 
 ## Editing content
 

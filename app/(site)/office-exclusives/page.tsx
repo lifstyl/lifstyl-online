@@ -59,7 +59,8 @@ export default async function OfficeExclusivesPage({
                       key={listing.id}
                       listing={listing}
                       canManage={
-                        session.isAdmin || listing.agentId === session.agentId
+                        session.canManageAllListings ||
+                        listing.agentId === session.agentId
                       }
                     />
                   ))}

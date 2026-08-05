@@ -1,5 +1,11 @@
 import { getAgents } from "@/lib/content";
-import { addAgent, updateAgentPhone, setAgentActive, deleteAgent } from "@/lib/actions";
+import {
+  addAgent,
+  updateAgentPhone,
+  setAgentActive,
+  setAgentManager,
+  deleteAgent,
+} from "@/lib/actions";
 import { EditorHeader, Card } from "@/components/admin/editor-header";
 import { Field, SubmitButton, inputClass } from "@/components/admin/ui";
 
@@ -49,6 +55,11 @@ export default async function AdminExclusiveAgentsPage() {
                 <h3 className="font-serif text-lg text-navy">{agent.name}</h3>
                 <p className="mt-0.5 text-sm text-text-muted">
                   Phone ends in {agent.phoneLast4 || "—"}
+                  {agent.isManager && (
+                    <span className="ml-2 rounded-full bg-navy/10 px-2 py-0.5 text-xs font-medium text-navy">
+                      Manages all listings
+                    </span>
+                  )}
                   {!agent.active && (
                     <span className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700">
                       Access revoked
@@ -56,7 +67,18 @@ export default async function AdminExclusiveAgentsPage() {
                   )}
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <form action={setAgentManager}>
+                  <input type="hidden" name="id" value={agent.id} />
+                  <input
+                    type="hidden"
+                    name="manager"
+                    value={agent.isManager ? "false" : "true"}
+                  />
+                  <SubmitButton variant="ghost">
+                    {agent.isManager ? "Remove manager" : "Make manager"}
+                  </SubmitButton>
+                </form>
                 <form action={setAgentActive}>
                   <input type="hidden" name="id" value={agent.id} />
                   <input
@@ -104,9 +126,12 @@ export default async function AdminExclusiveAgentsPage() {
         )}
       </div>
 
-      <p className="mt-6 text-xs text-text-muted">
+      <p className="mt-6 text-xs leading-relaxed text-text-muted">
         Deleting an agent also removes the listings they posted. To keep their
         listings but stop them signing in, use “Revoke access” instead.
+        <br />
+        “Make manager” lets an agent edit or remove any listing on the board. It
+        does not give them access to this admin panel.
       </p>
     </>
   );

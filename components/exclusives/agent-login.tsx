@@ -12,7 +12,6 @@ export function AgentLogin({ error }: { error?: string }) {
     "use server";
     try {
       await signIn("agent", {
-        name: formData.get("name"),
         phone: formData.get("phone"),
         redirectTo: "/office-exclusives",
       });
@@ -31,29 +30,18 @@ export function AgentLogin({ error }: { error?: string }) {
           Agent Sign In
         </h2>
         <p className="mt-2 text-center text-sm text-text-body">
-          Office Exclusives is private to Lifstyl agents. Sign in with your name
-          and phone number.
+          Office Exclusives is private to Lifstyl agents. Sign in with your
+          phone number.
         </p>
 
         {error && (
           <p className="mt-5 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-700">
-            We couldn&apos;t match that name and phone number. Check with the
-            office if you need access.
+            We don&apos;t recognize that phone number. Check with the office if
+            you need access.
           </p>
         )}
 
         <form action={authenticate} className="mt-6 flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Your name
-            </span>
-            <input
-              name="name"
-              required
-              autoComplete="name"
-              className="w-full rounded-sm border border-border bg-white px-3 py-2.5 text-sm text-black outline-none focus:border-gold"
-            />
-          </label>
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">
               Phone number

@@ -15,7 +15,7 @@ import {
 } from "./db/schema";
 import { saveImage, isImageFile } from "./upload";
 import { getSessionInfo } from "@/auth";
-import { normalizePhone } from "./phone";
+import { normalizePhone, phoneLookupKey } from "./phone";
 import bcrypt from "bcryptjs";
 
 async function requireAdmin() {
@@ -423,7 +423,7 @@ export async function updateListing(formData: FormData) {
     .limit(1);
   if (!existing[0]) throw new Error("Listing not found.");
   // Agents may only touch their own listings; the admin may touch any.
-  if (!info.isAdmin && existing[0].agentId !== info.agentId) {
+  if (!info.canManageAllListings && existing[0].agentId !== info.agentId) {
     throw new Error("You can only edit your own listings.");
   }
 
@@ -446,7 +446,7 @@ export async function deleteListing(formData: FormData) {
     .where(eq(listings.id, id))
     .limit(1);
   if (!existing[0]) return;
-  if (!info.isAdmin && existing[0].agentId !== info.agentId) {
+  if (!info.canManageAllListings && existing[0].agentId !== info.agentId) {
     throw new Error("You can only remove your own listings.");
   }
 
@@ -468,13 +468,23 @@ export async function addAgent(formData: FormData) {
     throw new Error("Enter a full phone number — it's the agent's password.");
   }
 
-  const existing = await db.select().from(agents);
-  if (existing.some((a) => a.name.trim().toLowerCase() === name.toLowerCase())) {
-    throw new Error(`An agent named "${name}" already exists.`);
+  // Phone is the sign-in credential, so it must be unique — two agents sharing
+  // a number would make sign-in ambiguous.
+  const lookup = phoneLookupKey(phone);
+  const clash = await db
+    .select({ name: agents.name })
+    .from(agents)
+    .where(eq(agents.phoneLookup, lookup))
+    .limit(1);
+  if (clash[0]) {
+    throw new Error(
+      `That phone number is already used by ${clash[0].name}. Each agent needs their own number.`
+    );
   }
 
   await db.insert(agents).values({
     name,
+    phoneLookup: lookup,
     phoneHash: bcrypt.hashSync(phone, 10),
     phoneLast4: phone.slice(-4),
   });
@@ -483,15 +493,47 @@ export async function addAgent(formData: FormData) {
 
 export async function updateAgentPhone(formData: FormData) {
   await requireAdmin();
+  const id = num(formData, "id");
   const phone = normalizePhone(str(formData, "phone"));
   if (phone.length < 7) {
     throw new Error("Enter a full phone number — it's the agent's password.");
   }
+
+  const lookup = phoneLookupKey(phone);
+  const clash = await db
+    .select({ id: agents.id, name: agents.name })
+    .from(agents)
+    .where(eq(agents.phoneLookup, lookup))
+    .limit(1);
+  if (clash[0] && clash[0].id !== id) {
+    throw new Error(
+      `That phone number is already used by ${clash[0].name}. Each agent needs their own number.`
+    );
+  }
+
   await db
     .update(agents)
-    .set({ phoneHash: bcrypt.hashSync(phone, 10), phoneLast4: phone.slice(-4) })
+    .set({
+      phoneLookup: lookup,
+      phoneHash: bcrypt.hashSync(phone, 10),
+      phoneLast4: phone.slice(-4),
+    })
+    .where(eq(agents.id, id));
+  revalidatePath("/admin/exclusive-agents");
+}
+
+/**
+ * Toggle whether an agent can manage every listing on the board.
+ * This is scoped to Office Exclusives only — it grants no /admin access.
+ */
+export async function setAgentManager(formData: FormData) {
+  await requireAdmin();
+  await db
+    .update(agents)
+    .set({ isManager: str(formData, "manager") === "true" })
     .where(eq(agents.id, num(formData, "id")));
   revalidatePath("/admin/exclusive-agents");
+  revalidatePath("/office-exclusives");
 }
 
 export async function setAgentActive(formData: FormData) {

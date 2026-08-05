@@ -93,10 +93,19 @@ export const pageContent = pgTable("page_content", {
  */
 export const agents = pgTable("agents", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  // Display only — agents sign in with their phone number, so names don't
+  // need to be unique (two agents could legitimately share one).
+  name: text("name").notNull(),
+  // Peppered SHA-256 of the phone, used to find the agent at sign-in.
+  // Unique, so one number can never map to two agents. See lib/phone.ts.
+  phoneLookup: text("phone_lookup").notNull().unique(),
   phoneHash: text("phone_hash").notNull(),
   phoneLast4: text("phone_last4").notNull().default(""),
   active: boolean("active").notNull().default(true),
+  // Lets this agent edit/remove ANY listing on the Office Exclusives board.
+  // Deliberately separate from the site admin role: it grants nothing in
+  // /admin, so board management never becomes reachable with just a phone.
+  isManager: boolean("is_manager").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -1,10 +1,11 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { eq } from "drizzle-orm";
 import { authConfig } from "./auth.config";
 import { db } from "./lib/db";
 import { agents } from "./lib/db/schema";
-import { normalizePhone } from "./lib/phone";
+import { normalizePhone, phoneLookupKey } from "./lib/phone";
 
 /**
  * Two separate login realms:
@@ -50,20 +51,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       id: "agent",
       name: "Agent",
       credentials: {
-        name: { label: "Name", type: "text" },
-        phone: { label: "Phone number", type: "text" },
+        phone: { label: "Phone number", type: "password" },
       },
       async authorize(credentials) {
-        const name = String(credentials?.name ?? "").trim();
         const phone = normalizePhone(String(credentials?.phone ?? ""));
-        if (!name || !phone) return null;
+        if (!phone) return null;
 
-        const rows = await db.select().from(agents);
-        // Names are matched case-insensitively so agents don't get tripped up
-        // by capitalisation; the phone number is the actual secret.
-        const agent = rows.find(
-          (a) => a.name.trim().toLowerCase() === name.toLowerCase()
-        );
+        // Find by the indexed lookup key rather than scanning every agent's
+        // bcrypt hash, then verify with bcrypt.
+        const rows = await db
+          .select()
+          .from(agents)
+          .where(eq(agents.phoneLookup, phoneLookupKey(phone)))
+          .limit(1);
+
+        const agent = rows[0];
         if (!agent || !agent.active) return null;
         if (!bcrypt.compareSync(phone, agent.phoneHash)) return null;
 
@@ -72,6 +74,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: agent.name,
           role: "agent",
           agentId: agent.id,
+          manageAll: agent.isManager,
         };
       },
     }),
@@ -86,12 +89,16 @@ export async function getSessionInfo() {
     name?: string | null;
     role?: string;
     agentId?: number;
+    manageAll?: boolean;
   };
+  const isAdmin = user.role === "admin";
   return {
     name: user.name ?? "",
     role: user.role ?? "",
     agentId: user.agentId,
-    isAdmin: user.role === "admin",
+    isAdmin,
     isAgent: user.role === "agent",
+    /** Can edit/remove any listing: the site admin, or a manager agent. */
+    canManageAllListings: isAdmin || user.manageAll === true,
   };
 }
