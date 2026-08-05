@@ -22,9 +22,14 @@ const cards = [
     desc: "Intro text and the room-booking link.",
   },
   {
-    href: "/admin/open-house-showcase",
-    title: "Open House Showcase",
-    desc: "Intro text and the Google Form link for open-house submissions.",
+    href: "/admin/office-exclusives",
+    title: "Office Exclusives",
+    desc: "Every listing agents have posted. Edit or remove any of them.",
+  },
+  {
+    href: "/admin/exclusive-agents",
+    title: "Exclusive Agents",
+    desc: "Who can sign in to post listings. Add agents, reset phone numbers, or revoke access.",
   },
   {
     href: "/admin/marketing-materials",

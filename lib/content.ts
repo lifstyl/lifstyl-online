@@ -1,5 +1,5 @@
 import "server-only";
-import { asc, eq, and } from "drizzle-orm";
+import { asc, desc, eq, and } from "drizzle-orm";
 import { db } from "./db";
 import {
   carouselImages,
@@ -8,7 +8,10 @@ import {
   staffMembers,
   resourceLinks,
   pageContent,
+  agents,
+  listings,
 } from "./db/schema";
+import type { ListingWithAgent } from "./db/schema";
 
 export async function getCarouselImages() {
   return db.select().from(carouselImages).orderBy(asc(carouselImages.sortOrder));
@@ -70,6 +73,28 @@ export async function getPageContent(
   const out: Record<string, string> = {};
   for (const row of rows) out[row.key] = row.value;
   return out;
+}
+
+/**
+ * Office Exclusives listings, newest first, with the posting agent's name.
+ * The agent's phone (their password) is deliberately never selected here.
+ */
+export async function getListings(): Promise<ListingWithAgent[]> {
+  const rows = await db
+    .select({
+      listing: listings,
+      agentName: agents.name,
+    })
+    .from(listings)
+    .innerJoin(agents, eq(listings.agentId, agents.id))
+    .orderBy(desc(listings.createdAt));
+
+  return rows.map((r) => ({ ...r.listing, agentName: r.agentName }));
+}
+
+/** All agents, for the admin management screen. */
+export async function getAgents() {
+  return db.select().from(agents).orderBy(asc(agents.name));
 }
 
 export async function getPageContentValue(

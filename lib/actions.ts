@@ -10,13 +10,29 @@ import {
   staffMembers,
   resourceLinks,
   pageContent,
+  agents,
+  listings,
 } from "./db/schema";
 import { saveImage, isImageFile } from "./upload";
-import { auth } from "@/auth";
+import { getSessionInfo } from "@/auth";
+import { normalizePhone } from "./phone";
+import bcrypt from "bcryptjs";
 
 async function requireAdmin() {
-  const session = await auth();
-  if (!session) throw new Error("Not authorized");
+  const info = await getSessionInfo();
+  if (!info?.isAdmin) throw new Error("Not authorized");
+}
+
+/**
+ * Office Exclusives access: either a logged-in agent or the admin.
+ * Returns the session info so callers can enforce per-agent ownership.
+ */
+async function requireExclusivesAccess() {
+  const info = await getSessionInfo();
+  if (!info || (!info.isAgent && !info.isAdmin)) {
+    throw new Error("Not authorized");
+  }
+  return info;
 }
 
 function str(fd: FormData, key: string): string {
@@ -326,6 +342,174 @@ export async function savePageContent(formData: FormData) {
     }
   }
   revalidatePagesForSlug(pageSlug);
+}
+
+// ─────────────────────────────────────────────────────────────
+// OFFICE EXCLUSIVES — LISTINGS
+// ─────────────────────────────────────────────────────────────
+
+/** Pull and validate the listing fields shared by add + update. */
+function listingFieldsFrom(formData: FormData) {
+  const bedrooms = Number(str(formData, "bedrooms"));
+  const bathrooms = Number(str(formData, "bathrooms"));
+  const squareFeet = Number(str(formData, "squareFeet"));
+  const priceRaw = normalizeDigits(str(formData, "price"));
+
+  const fields = {
+    streetNumber: str(formData, "streetNumber"),
+    streetName: str(formData, "streetName"),
+    city: str(formData, "city"),
+    state: str(formData, "state").toUpperCase(),
+    zip: str(formData, "zip"),
+    bedrooms,
+    bathrooms,
+    squareFeet,
+    price: priceRaw ? Number(priceRaw) : null,
+    notes: str(formData, "notes"),
+  };
+
+  const missing = (
+    ["streetNumber", "streetName", "city", "state", "zip"] as const
+  ).filter((k) => !fields[k]);
+  if (missing.length) {
+    throw new Error("Please fill in the full property address.");
+  }
+  if (!Number.isFinite(bedrooms) || bedrooms < 0) {
+    throw new Error("Bedrooms must be a number.");
+  }
+  if (!Number.isFinite(bathrooms) || bathrooms < 0) {
+    throw new Error("Bathrooms must be a number.");
+  }
+  if (!Number.isFinite(squareFeet) || squareFeet <= 0) {
+    throw new Error("Square footage must be a number greater than zero.");
+  }
+
+  return fields;
+}
+
+/** Strip everything but digits, so "$450,000" becomes "450000". */
+function normalizeDigits(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+export async function addListing(formData: FormData) {
+  const info = await requireExclusivesAccess();
+  // The admin has no agent record of their own, so listings are posted by
+  // agents only; the admin manages existing ones from the admin panel.
+  if (!info.agentId) {
+    throw new Error("Only agents can post listings.");
+  }
+
+  const file = formData.get("image");
+  const imageUrl = isImageFile(file) ? await saveImage(file) : null;
+
+  await db.insert(listings).values({
+    agentId: info.agentId,
+    imageUrl,
+    ...listingFieldsFrom(formData),
+  });
+  revalidatePath("/office-exclusives");
+  revalidatePath("/admin/office-exclusives");
+}
+
+export async function updateListing(formData: FormData) {
+  const info = await requireExclusivesAccess();
+  const id = num(formData, "id");
+
+  const existing = await db
+    .select()
+    .from(listings)
+    .where(eq(listings.id, id))
+    .limit(1);
+  if (!existing[0]) throw new Error("Listing not found.");
+  // Agents may only touch their own listings; the admin may touch any.
+  if (!info.isAdmin && existing[0].agentId !== info.agentId) {
+    throw new Error("You can only edit your own listings.");
+  }
+
+  const file = formData.get("image");
+  const values: Record<string, unknown> = { ...listingFieldsFrom(formData) };
+  if (isImageFile(file)) values.imageUrl = await saveImage(file);
+
+  await db.update(listings).set(values).where(eq(listings.id, id));
+  revalidatePath("/office-exclusives");
+  revalidatePath("/admin/office-exclusives");
+}
+
+export async function deleteListing(formData: FormData) {
+  const info = await requireExclusivesAccess();
+  const id = num(formData, "id");
+
+  const existing = await db
+    .select()
+    .from(listings)
+    .where(eq(listings.id, id))
+    .limit(1);
+  if (!existing[0]) return;
+  if (!info.isAdmin && existing[0].agentId !== info.agentId) {
+    throw new Error("You can only remove your own listings.");
+  }
+
+  await db.delete(listings).where(eq(listings.id, id));
+  revalidatePath("/office-exclusives");
+  revalidatePath("/admin/office-exclusives");
+}
+
+// ─────────────────────────────────────────────────────────────
+// OFFICE EXCLUSIVES — AGENTS (admin only)
+// ─────────────────────────────────────────────────────────────
+export async function addAgent(formData: FormData) {
+  await requireAdmin();
+  const name = str(formData, "name");
+  const phone = normalizePhone(str(formData, "phone"));
+
+  if (!name) throw new Error("Agent name is required.");
+  if (phone.length < 7) {
+    throw new Error("Enter a full phone number — it's the agent's password.");
+  }
+
+  const existing = await db.select().from(agents);
+  if (existing.some((a) => a.name.trim().toLowerCase() === name.toLowerCase())) {
+    throw new Error(`An agent named "${name}" already exists.`);
+  }
+
+  await db.insert(agents).values({
+    name,
+    phoneHash: bcrypt.hashSync(phone, 10),
+    phoneLast4: phone.slice(-4),
+  });
+  revalidatePath("/admin/exclusive-agents");
+}
+
+export async function updateAgentPhone(formData: FormData) {
+  await requireAdmin();
+  const phone = normalizePhone(str(formData, "phone"));
+  if (phone.length < 7) {
+    throw new Error("Enter a full phone number — it's the agent's password.");
+  }
+  await db
+    .update(agents)
+    .set({ phoneHash: bcrypt.hashSync(phone, 10), phoneLast4: phone.slice(-4) })
+    .where(eq(agents.id, num(formData, "id")));
+  revalidatePath("/admin/exclusive-agents");
+}
+
+export async function setAgentActive(formData: FormData) {
+  await requireAdmin();
+  await db
+    .update(agents)
+    .set({ active: str(formData, "active") === "true" })
+    .where(eq(agents.id, num(formData, "id")));
+  revalidatePath("/admin/exclusive-agents");
+}
+
+/** Removing an agent also removes their listings (FK is ON DELETE CASCADE). */
+export async function deleteAgent(formData: FormData) {
+  await requireAdmin();
+  await db.delete(agents).where(eq(agents.id, num(formData, "id")));
+  revalidatePath("/admin/exclusive-agents");
+  revalidatePath("/admin/office-exclusives");
+  revalidatePath("/office-exclusives");
 }
 
 // ── revalidation helpers ────────────────────────────────────

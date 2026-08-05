@@ -8,7 +8,6 @@ import { Logo } from "./logo";
 const brokerageResources = [
   { label: "Quarterly Meeting Materials", href: "/quarterly-meeting-materials" },
   { label: "Book a Conference Room", href: "/book-a-conference-room" },
-  { label: "Open House Showcase", href: "/open-house-showcase" },
   {
     label: "Recommendations For Marketing Materials",
     href: "/recommendations-for-marketing-materials",
@@ -122,6 +121,9 @@ export function Nav() {
             )}
           </li>
 
+          <NavLink href="/office-exclusives" solid={solid}>
+            Office Exclusives
+          </NavLink>
           <NavLink href="/faqs" solid={solid}>
             FAQs
           </NavLink>
@@ -180,6 +182,7 @@ export function Nav() {
                 ))}
               </ul>
             </li>
+            <MobileLink href="/office-exclusives">Office Exclusives</MobileLink>
             <MobileLink href="/faqs">FAQs</MobileLink>
             <MobileLink href="/support-staff">Support Staff</MobileLink>
           </ul>

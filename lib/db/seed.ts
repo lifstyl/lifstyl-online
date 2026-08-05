@@ -212,22 +212,6 @@ async function main() {
     },
   ]);
 
-  // ── Open House Showcase (new page) ──────────────────────────
-  await db.insert(pageContent).values([
-    {
-      pageSlug: "open-house-showcase",
-      key: "intro",
-      value:
-        "Biweekly, we do a showcase on our social media highlighting the open houses taking place during the weekend. Information is pulled from FlexMLS unless you fill out the Google Form with the corrected information.",
-    },
-    // PLACEHOLDER: set the real Open House Showcase Google Form URL via /admin.
-    {
-      pageSlug: "open-house-showcase",
-      key: "formUrl",
-      value: "https://forms.gle/REPLACE_WITH_OPEN_HOUSE_FORM",
-    },
-  ]);
-
   console.log("✓ Seed complete.");
   await client.end();
 }

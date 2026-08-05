@@ -16,10 +16,28 @@ Styled to match its sister site, [limitlesslifstyl.com](https://limitlesslifstyl
 ## Pages
 
 Public: Home, FAQs, Quarterly Meeting Materials, Book a Conference Room,
-Open House Showcase, Recommendations For Marketing Materials, Support Staff.
+Recommendations For Marketing Materials, Support Staff.
+
+**Office Exclusives** (`/office-exclusives`) is agent-only. Agents sign in with
+their name and phone number to post listings to the office. Listing data is
+only queried once a session exists, so nothing is served to logged-out visitors.
 
 Admin (`/admin`, login-protected): one editor per section above, plus the
-homepage carousel, calendar link, About copy, and testimonials.
+homepage carousel, calendar link, About copy, testimonials, and the two
+Office Exclusives screens (all listings, and who can sign in).
+
+### Two separate logins
+
+| | Signs in at | Credential | Can do |
+|---|---|---|---|
+| **You (admin)** | `/admin/login` | Email + password | Everything, including editing/removing any listing |
+| **Agents** | `/office-exclusives` | Name + phone number | Post listings; edit/remove only their own |
+
+Agents are managed from **Admin → Exclusive Agents**. An agent's phone number
+*is* their password, so it's stored only as a bcrypt hash and never displayed
+anywhere on the site — the admin screen shows just the last 4 digits so you can
+tell which number they were set up with. "Revoke access" blocks sign-in while
+keeping their listings; "Delete" removes the agent and their listings.
 
 ## Editing content
 
@@ -29,8 +47,9 @@ Go to `/admin`, log in, pick a section. Everything is editable:
   Google Calendar embed link, edit the About copy, manage testimonials.
 - **FAQs / Quarterly Meetings / Marketing Materials / Support Staff** — add,
   edit, reorder (↑/↓), and delete entries.
-- **Book a Conference Room / Open House Showcase** — edit intro text and the
-  outbound link.
+- **Book a Conference Room** — edit intro text and the outbound booking link.
+- **Office Exclusives** — remove any agent listing.
+- **Exclusive Agents** — add agents, reset a phone number, revoke access.
 
 Changes appear on the live site immediately.
 
@@ -73,6 +92,11 @@ Vercel is connected and auto-deploys on push.
    npm run db:seed        # optional — only for first-time content load
    ```
 
+> **After deploying a schema change**, run the migration against the production
+> database (locally, with `POSTGRES_URL` pointed at the Vercel database):
+> `POSTGRES_URL="<prod-url>" npm run db:migrate`. Do **not** re-run `db:seed`
+> on production — it clears the content tables and would wipe your edits.
+
 ## Things to set after launch
 
 These were placeholders in the seed and should be set from `/admin`:
@@ -81,9 +105,8 @@ These were placeholders in the seed and should be set from `/admin`:
   embed wasn't working on the old site. Paste the `src="…"` URL from Google
   Calendar → Settings → *your calendar* → **Integrate calendar** → Embed code.
   It auto-updates whenever you add an event.
-- **Open House Showcase** — set the real Google Form link.
-- Replace the text-based logo (`components/logo.tsx`) with the real Lifstyl
-  wordmark: drop the file in `/public` and swap in an `<Image>`.
+- **Office Exclusives agents** (Admin → Exclusive Agents) — nobody can sign in
+  to the listings board until agents are added here.
 
 ## Security note
 
