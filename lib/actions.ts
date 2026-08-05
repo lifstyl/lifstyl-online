@@ -563,14 +563,17 @@ export async function deleteAgent(formData: FormData) {
 // ─────────────────────────────────────────────────────────────
 export async function runDatabaseUpdate() {
   await requireAdmin();
+  let note: string | undefined;
   try {
-    await runMigrations();
+    ({ note } = await runMigrations());
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     redirect(`/admin/setup?error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/setup");
-  redirect("/admin/setup?done=structure");
+  redirect(
+    `/admin/setup?done=structure${note ? `&note=${encodeURIComponent(note)}` : ""}`
+  );
 }
 
 /**

@@ -8,7 +8,12 @@ export const dynamic = "force-dynamic";
 export default async function AdminSetupPage({
   searchParams,
 }: {
-  searchParams: { error?: string; done?: string; imported?: string };
+  searchParams: {
+    error?: string;
+    done?: string;
+    imported?: string;
+    note?: string;
+  };
 }) {
   const status = await getDbStatus();
 
@@ -31,8 +36,11 @@ export default async function AdminSetupPage({
       {searchParams.done === "structure" && (
         <div className="mb-6 rounded-sm border border-green-200 bg-green-50 p-4">
           <p className="text-sm text-green-800">
-            Database structure is up to date.
+            Database structure is up to date. Now do step 2 below.
           </p>
+          {searchParams.note && (
+            <p className="mt-1 text-xs text-green-700">{searchParams.note}</p>
+          )}
         </div>
       )}
       {searchParams.imported && (

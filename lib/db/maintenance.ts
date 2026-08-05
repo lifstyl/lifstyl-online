@@ -96,15 +96,94 @@ export async function getDbStatus(): Promise<DbStatus> {
 }
 
 /**
- * Apply any pending Drizzle migrations. The SQL files are bundled into this
- * route by `outputFileTracingIncludes` in next.config.mjs.
+ * Statements that bring a database up to the current Office Exclusives schema
+ * without reading anything off disk. Every one is written to be safe to repeat.
+ *
+ * This exists because the migration files are plain .sql that nothing imports,
+ * so they only reach the deployed function via build-time file tracing — and
+ * if that ever fails, the migrator can't run at all. These statements need no
+ * files, so the setup page keeps working regardless.
  */
-export async function runMigrations(): Promise<void> {
+const SCHEMA_STATEMENTS: string[] = [
+  `CREATE TABLE IF NOT EXISTS "agents" (
+     "id" serial PRIMARY KEY NOT NULL,
+     "name" text NOT NULL,
+     "phone_lookup" text,
+     "phone_hash" text DEFAULT '' NOT NULL,
+     "phone_last4" text DEFAULT '' NOT NULL,
+     "active" boolean DEFAULT true NOT NULL,
+     "is_manager" boolean DEFAULT false NOT NULL,
+     "created_at" timestamp DEFAULT now() NOT NULL
+   )`,
+  // For a table that predates these columns.
+  `ALTER TABLE "agents" ADD COLUMN IF NOT EXISTS "phone_lookup" text`,
+  `ALTER TABLE "agents" ADD COLUMN IF NOT EXISTS "phone_hash" text DEFAULT '' NOT NULL`,
+  `ALTER TABLE "agents" ADD COLUMN IF NOT EXISTS "phone_last4" text DEFAULT '' NOT NULL`,
+  `ALTER TABLE "agents" ADD COLUMN IF NOT EXISTS "active" boolean DEFAULT true NOT NULL`,
+  `ALTER TABLE "agents" ADD COLUMN IF NOT EXISTS "is_manager" boolean DEFAULT false NOT NULL`,
+  // Rows without a lookup key can't be signed in as, so they're unusable
+  // leftovers; clearing them is what allows the NOT NULL below.
+  `DELETE FROM "agents" WHERE "phone_lookup" IS NULL`,
+  `ALTER TABLE "agents" ALTER COLUMN "phone_lookup" SET NOT NULL`,
+  `DO $$ BEGIN
+     ALTER TABLE "agents" ADD CONSTRAINT "agents_phone_lookup_unique" UNIQUE ("phone_lookup");
+   EXCEPTION WHEN duplicate_table THEN NULL; WHEN duplicate_object THEN NULL;
+   END $$`,
+  `ALTER TABLE "agents" DROP CONSTRAINT IF EXISTS "agents_name_unique"`,
+  `CREATE TABLE IF NOT EXISTS "listings" (
+     "id" serial PRIMARY KEY NOT NULL,
+     "agent_id" integer NOT NULL,
+     "image_url" text,
+     "street_number" text NOT NULL,
+     "street_name" text NOT NULL,
+     "city" text NOT NULL,
+     "state" text NOT NULL,
+     "zip" text NOT NULL,
+     "bedrooms" integer NOT NULL,
+     "bathrooms" double precision NOT NULL,
+     "square_feet" integer NOT NULL,
+     "price" integer,
+     "notes" text DEFAULT '' NOT NULL,
+     "created_at" timestamp DEFAULT now() NOT NULL
+   )`,
+  `DO $$ BEGIN
+     ALTER TABLE "listings" ADD CONSTRAINT "listings_agent_id_agents_id_fk"
+       FOREIGN KEY ("agent_id") REFERENCES "agents"("id") ON DELETE CASCADE;
+   EXCEPTION WHEN duplicate_object THEN NULL;
+   END $$`,
+];
+
+/**
+ * Bring the database up to date.
+ *
+ * Prefers the real Drizzle migrator so the migration journal stays accurate,
+ * and falls back to the file-free statements above if it can't run — which is
+ * what matters in production, where the tables being absent is the whole
+ * problem. Returns a note when the fallback was used so the UI can say so.
+ */
+export async function runMigrations(): Promise<{ note?: string }> {
   const client = connection();
   try {
-    await migrate(drizzle(client), {
-      migrationsFolder: path.join(process.cwd(), "drizzle"),
-    });
+    try {
+      await migrate(drizzle(client), {
+        migrationsFolder: path.join(process.cwd(), "drizzle"),
+      });
+      return {};
+    } catch (migratorError) {
+      const reason =
+        migratorError instanceof Error
+          ? migratorError.message
+          : String(migratorError);
+
+      for (const statement of SCHEMA_STATEMENTS) {
+        await client.unsafe(statement);
+      }
+      return {
+        note:
+          "Applied directly, because the standard migration step couldn't run " +
+          `(${reason}). The database is up to date either way.`,
+      };
+    }
   } finally {
     await client.end().catch(() => {});
   }
