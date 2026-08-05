@@ -2,7 +2,7 @@ import { config } from "dotenv";
 config({ path: ".env" });
 
 import { drizzle } from "drizzle-orm/postgres-js";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import postgres from "postgres";
 import { readFileSync } from "fs";
 import bcrypt from "bcryptjs";
@@ -23,9 +23,17 @@ import { normalizePhone, phoneLookupKey } from "../phone";
  *
  * Set MANAGER_PHONE to grant one agent management of every listing:
  *   MANAGER_PHONE=8595551212 npm run agents:import -- roster.csv
+ *
+ * Pass --replace to clear the agent table first. Needed if a previous import
+ * ran with a different AUTH_SECRET: the stored lookup keys would be derived
+ * from the wrong pepper, so nobody could sign in, and a plain re-run would
+ * add a second copy of everyone rather than repair them (rows are matched by
+ * that same key). WARNING: removing agents also removes their listings.
  */
 async function main() {
-  const files = process.argv.slice(2).filter((a) => !a.startsWith("-"));
+  const args = process.argv.slice(2);
+  const replace = args.includes("--replace");
+  const files = args.filter((a) => !a.startsWith("-"));
   if (files.length === 0) {
     console.error(
       'Usage: npm run agents:import -- "roster.csv" ["second-sheet.csv" ...]'
@@ -99,8 +107,37 @@ async function main() {
   const db = drizzle(client, { schema });
   const { agents } = schema;
 
+  if (replace) {
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(agents);
+    await db.delete(agents);
+    console.log(`\n⚠ --replace: cleared ${count} existing agent row(s).`);
+  }
+
   const existing = await db.select().from(agents);
   const byLookup = new Map(existing.map((a) => [a.phoneLookup, a]));
+
+  // A populated table where nothing matches usually means the stored keys were
+  // built with a different AUTH_SECRET — importing over it would duplicate
+  // everyone instead of fixing them, so stop and explain.
+  if (!replace && existing.length > 0) {
+    const anyMatch = [...seen.values()].some((r) =>
+      byLookup.has(phoneLookupKey(r.phone))
+    );
+    if (!anyMatch) {
+      console.error(
+        `\n✗ ${existing.length} agent(s) are already in this database, but none ` +
+          `match the roster.\n` +
+          `  That almost always means they were imported with a different ` +
+          `AUTH_SECRET,\n  so their sign-in keys are unusable.\n\n` +
+          `  Check AUTH_SECRET matches this environment, then re-run with ` +
+          `--replace to rebuild:\n    npm run agents:import -- --replace "file.csv"\n`
+      );
+      await client.end();
+      process.exit(1);
+    }
+  }
 
   let added = 0;
   let updated = 0;
