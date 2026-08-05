@@ -13,6 +13,7 @@ const links = [
   { href: "/admin/exclusive-agents", label: "Exclusive Agents" },
   { href: "/admin/marketing-materials", label: "Marketing Materials" },
   { href: "/admin/support-staff", label: "Support Staff" },
+  { href: "/admin/setup", label: "Setup" },
 ];
 
 export function Sidebar() {

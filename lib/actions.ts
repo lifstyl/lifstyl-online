@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
@@ -16,6 +17,8 @@ import {
 import { saveImage, isImageFile } from "./upload";
 import { getSessionInfo } from "@/auth";
 import { normalizePhone, phoneLookupKey } from "./phone";
+import { parseRoster } from "./roster";
+import { runMigrations } from "./db/maintenance";
 import bcrypt from "bcryptjs";
 
 async function requireAdmin() {
@@ -552,6 +555,119 @@ export async function deleteAgent(formData: FormData) {
   revalidatePath("/admin/exclusive-agents");
   revalidatePath("/admin/office-exclusives");
   revalidatePath("/office-exclusives");
+}
+
+// ─────────────────────────────────────────────────────────────
+// DATABASE SETUP (admin only) — see lib/db/maintenance.ts for why this runs
+// from inside the app rather than from a terminal.
+// ─────────────────────────────────────────────────────────────
+export async function runDatabaseUpdate() {
+  await requireAdmin();
+  try {
+    await runMigrations();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    redirect(`/admin/setup?error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/setup");
+  redirect("/admin/setup?done=structure");
+}
+
+/**
+ * Bulk-import agents from uploaded roster CSVs. Runs on the server so the
+ * lookup keys are built with the same AUTH_SECRET the sign-in uses.
+ */
+export async function importRoster(formData: FormData) {
+  await requireAdmin();
+
+  const files = formData
+    .getAll("rosters")
+    .filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) {
+    redirect(
+      `/admin/setup?error=${encodeURIComponent("Choose at least one CSV file.")}`
+    );
+  }
+
+  const managerPhone = normalizePhone(str(formData, "managerPhone"));
+  const replace = str(formData, "replace") === "on";
+
+  let outcome: string;
+  try {
+    const texts = await Promise.all(files.map((f) => f.text()));
+    const { entries, duplicates, skipped } = parseRoster(texts);
+
+    if (duplicates.length) {
+      redirect(
+        `/admin/setup?error=${encodeURIComponent(
+          `The same phone number appears on more than one agent, and it's their password so it must be unique: ${duplicates.join("; ")}`
+        )}`
+      );
+    }
+    if (entries.length === 0) {
+      redirect(
+        `/admin/setup?error=${encodeURIComponent(
+          "No agents found in those files. Each line should be a name, a comma, then a phone number."
+        )}`
+      );
+    }
+
+    if (replace) await db.delete(agents);
+
+    const existing = await db.select().from(agents);
+    const byLookup = new Map(existing.map((a) => [a.phoneLookup, a]));
+
+    let added = 0;
+    let updated = 0;
+    let manager: string | null = null;
+
+    for (const entry of entries) {
+      const lookup = phoneLookupKey(entry.phone);
+      const isManager = !!managerPhone && entry.phone === managerPhone;
+      if (isManager) manager = entry.name;
+
+      const match = byLookup.get(lookup);
+      if (match) {
+        await db
+          .update(agents)
+          .set({
+            name: entry.name,
+            phoneLast4: entry.phone.slice(-4),
+            ...(isManager ? { isManager: true } : {}),
+          })
+          .where(eq(agents.id, match.id));
+        updated++;
+      } else {
+        await db.insert(agents).values({
+          name: entry.name,
+          phoneLookup: lookup,
+          phoneHash: bcrypt.hashSync(entry.phone, 10),
+          phoneLast4: entry.phone.slice(-4),
+          isManager,
+        });
+        added++;
+      }
+    }
+
+    outcome =
+      `${added} agent${added === 1 ? "" : "s"} added, ${updated} updated. ` +
+      (manager
+        ? `${manager} can manage every listing.`
+        : managerPhone
+          ? "That manager phone number wasn't found in the roster."
+          : "No manager was set.") +
+      (skipped.length ? ` ${skipped.length} blank/heading row(s) ignored.` : "");
+  } catch (err) {
+    // redirect() throws by design — let it through.
+    if (err && typeof err === "object" && "digest" in err) throw err;
+    const message = err instanceof Error ? err.message : String(err);
+    redirect(`/admin/setup?error=${encodeURIComponent(message)}`);
+  }
+
+  revalidatePath("/admin/setup");
+  revalidatePath("/admin/exclusive-agents");
+  revalidatePath("/office-exclusives");
+  redirect(`/admin/setup?imported=${encodeURIComponent(outcome)}`);
 }
 
 // ── revalidation helpers ────────────────────────────────────
