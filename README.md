@@ -18,9 +18,38 @@ Styled to match its sister site, [limitlesslifstyl.com](https://limitlesslifstyl
 Public: Home, FAQs, Quarterly Meeting Materials, Book a Conference Room,
 Recommendations For Marketing Materials, Support Staff.
 
-**Office Exclusives** (`/office-exclusives`) is agent-only. Agents sign in with
-their name and phone number to post listings to the office. Listing data is
-only queried once a session exists, so nothing is served to logged-out visitors.
+**Office Exclusives** (`/office-exclusives`) and **Buyer Wishlists**
+(`/buyer-wishlists`) are agent-only, sharing one sign-in. Agents enter just
+their phone number to post listings, or free-text notes about what their buyers
+are looking for. Both are only queried once a session exists, so nothing is
+served to logged-out visitors.
+
+### Posts expire on their own
+
+| | Stays up | Warning to admin |
+|---|---|---|
+| Office Exclusives listing | 30 days | 7 days before |
+| Buyer Wishlist | 90 days | 7 days before |
+
+Each card shows its own countdown ("Removes in 5 days"), and agents can take a
+post down early themselves.
+
+Removal is belt-and-braces: a daily Vercel cron (`vercel.json` →
+`/api/cron/cleanup`) deletes expired rows, *and* every query filters by age —
+so an expired post is never shown even if the cron misses a night. Set a
+`CRON_SECRET` env var to restrict that endpoint; the signed-in admin can also
+hit it directly to test.
+
+### Admin notifications
+
+The bell beside the logo in the admin panel shows unread alerts:
+
+- **New Office Exclusive Listing** — an agent posted a listing
+- **New Buyer Wishlist post** — an agent posted a wishlist
+- **…expiring soon** — raised 7 days before a post is removed
+
+Alerts are unique per post, so the nightly job never stacks up duplicates, and
+they're cleared automatically if the post they point at is deleted.
 
 Admin (`/admin`, login-protected): one editor per section above, plus the
 homepage carousel, calendar link, About copy, testimonials, and the two

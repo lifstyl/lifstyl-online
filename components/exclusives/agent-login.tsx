@@ -7,17 +7,26 @@ import { SubmitButton } from "@/components/admin/ui";
  * Gate shown on /office-exclusives when nobody is signed in.
  * Agents sign in with their name and phone number.
  */
-export function AgentLogin({ error }: { error?: string }) {
+export function AgentLogin({
+  error,
+  redirectTo = "/office-exclusives",
+  blurb = "Office Exclusives is private to Lifstyl agents. Sign in with your phone number.",
+}: {
+  error?: string;
+  redirectTo?: string;
+  blurb?: string;
+}) {
   async function authenticate(formData: FormData) {
     "use server";
+    const target = String(formData.get("redirectTo") || "/office-exclusives");
     try {
       await signIn("agent", {
         phone: formData.get("phone"),
-        redirectTo: "/office-exclusives",
+        redirectTo: target,
       });
     } catch (err) {
       if (err instanceof AuthError) {
-        redirect("/office-exclusives?error=1");
+        redirect(`${target}?error=1`);
       }
       throw err;
     }
@@ -29,10 +38,7 @@ export function AgentLogin({ error }: { error?: string }) {
         <h2 className="text-center font-serif text-2xl text-navy">
           Agent Sign In
         </h2>
-        <p className="mt-2 text-center text-sm text-text-body">
-          Office Exclusives is private to Lifstyl agents. Sign in with your
-          phone number.
-        </p>
+        <p className="mt-2 text-center text-sm text-text-body">{blurb}</p>
 
         {error && (
           <p className="mt-5 rounded-sm border border-red-200 bg-red-50 px-3 py-2 text-center text-sm text-red-700">
@@ -42,6 +48,7 @@ export function AgentLogin({ error }: { error?: string }) {
         )}
 
         <form action={authenticate} className="mt-6 flex flex-col gap-4">
+          <input type="hidden" name="redirectTo" value={redirectTo} />
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">
               Phone number

@@ -20,9 +20,14 @@ function formatBaths(value: number) {
 export function ListingCard({
   listing,
   canManage,
+  expiry,
+  expiringSoon,
 }: {
   listing: ListingWithAgent;
   canManage: boolean;
+  /** Precomputed server-side so server and client render the same value. */
+  expiry: string;
+  expiringSoon: boolean;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -123,6 +128,13 @@ export function ListingCard({
         <p className="mt-auto pt-5 text-sm text-text-muted">
           Listed by{" "}
           <span className="font-medium text-navy">{listing.agentName}</span>
+        </p>
+        <p
+          className={`mt-1 text-xs ${
+            expiringSoon ? "font-medium text-gold" : "text-text-muted"
+          }`}
+        >
+          {expiry}
         </p>
 
         {canManage && (

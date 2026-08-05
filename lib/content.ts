@@ -1,5 +1,5 @@
 import "server-only";
-import { asc, desc, eq, and } from "drizzle-orm";
+import { asc, desc, eq, and, gt, isNull, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
   carouselImages,
@@ -10,8 +10,11 @@ import {
   pageContent,
   agents,
   listings,
+  wishlists,
+  notifications,
 } from "./db/schema";
-import type { ListingWithAgent } from "./db/schema";
+import type { ListingWithAgent, WishlistWithAgent } from "./db/schema";
+import { expiryCutoff } from "./expiry";
 
 export async function getCarouselImages() {
   return db.select().from(carouselImages).orderBy(asc(carouselImages.sortOrder));
@@ -80,6 +83,8 @@ export async function getPageContent(
  * The agent's phone (their password) is deliberately never selected here.
  */
 export async function getListings(): Promise<ListingWithAgent[]> {
+  // Filtered by age as well as purged nightly, so an expired listing is never
+  // shown even if the cleanup job hasn't run yet.
   const rows = await db
     .select({
       listing: listings,
@@ -87,9 +92,41 @@ export async function getListings(): Promise<ListingWithAgent[]> {
     })
     .from(listings)
     .innerJoin(agents, eq(listings.agentId, agents.id))
+    .where(gt(listings.createdAt, expiryCutoff("listing")))
     .orderBy(desc(listings.createdAt));
 
   return rows.map((r) => ({ ...r.listing, agentName: r.agentName }));
+}
+
+export async function getWishlists(): Promise<WishlistWithAgent[]> {
+  const rows = await db
+    .select({
+      wishlist: wishlists,
+      agentName: agents.name,
+    })
+    .from(wishlists)
+    .innerJoin(agents, eq(wishlists.agentId, agents.id))
+    .where(gt(wishlists.createdAt, expiryCutoff("wishlist")))
+    .orderBy(desc(wishlists.createdAt));
+
+  return rows.map((r) => ({ ...r.wishlist, agentName: r.agentName }));
+}
+
+/** Newest first, unread before read, for the admin bell. */
+export async function getNotifications(limit = 50) {
+  return db
+    .select()
+    .from(notifications)
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const rows = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(notifications)
+    .where(isNull(notifications.readAt));
+  return rows[0]?.count ?? 0;
 }
 
 /** All agents, for the admin management screen. */

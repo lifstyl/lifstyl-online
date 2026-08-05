@@ -1,7 +1,15 @@
 import { signOut } from "@/auth";
 
 /** Small "signed in as …" strip with a sign-out control. */
-export function AgentBar({ name, isAdmin }: { name: string; isAdmin: boolean }) {
+export function AgentBar({
+  name,
+  isAdmin,
+  redirectTo = "/office-exclusives",
+}: {
+  name: string;
+  isAdmin: boolean;
+  redirectTo?: string;
+}) {
   return (
     <div className="mb-8 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-border bg-pure-white px-5 py-3">
       <p className="text-sm text-text-body">
@@ -15,7 +23,7 @@ export function AgentBar({ name, isAdmin }: { name: string; isAdmin: boolean }) 
       <form
         action={async () => {
           "use server";
-          await signOut({ redirectTo: "/office-exclusives" });
+          await signOut({ redirectTo });
         }}
       >
         <button

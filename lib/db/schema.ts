@@ -6,7 +6,16 @@ import {
   timestamp,
   boolean,
   doublePrecision,
+  unique,
 } from "drizzle-orm/pg-core";
+
+/**
+ * How long agent-posted content stays up before it's removed automatically,
+ * and how far ahead the admin is warned that something is about to go.
+ */
+export const LISTING_TTL_DAYS = 30;
+export const WISHLIST_TTL_DAYS = 90;
+export const EXPIRY_WARNING_DAYS = 7;
 
 /**
  * Homepage hero carousel images. Ordered by `sortOrder`.
@@ -136,10 +145,53 @@ export type CarouselImage = typeof carouselImages.$inferSelect;
 export type Testimonial = typeof testimonials.$inferSelect;
 export type Faq = typeof faqs.$inferSelect;
 export type StaffMember = typeof staffMembers.$inferSelect;
+/**
+ * Buyer wishlists — free-text "my buyer is looking for…" posts from agents.
+ * Removed automatically once they pass WISHLIST_TTL_DAYS.
+ */
+export const wishlists = pgTable("wishlists", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id")
+    .notNull()
+    .references(() => agents.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/**
+ * Admin notifications: new agent posts, and warnings before something is
+ * auto-deleted.
+ *
+ * `kind` + `entityId` are unique together so the daily cleanup can run as
+ * often as it likes without stacking up duplicate warnings for the same post.
+ */
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: serial("id").primaryKey(),
+    kind: text("kind").notNull(),
+    title: text("title").notNull(),
+    detail: text("detail").notNull().default(""),
+    href: text("href").notNull().default(""),
+    entityId: integer("entity_id").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    readAt: timestamp("read_at"),
+  },
+  (table) => ({
+    uniquePerEntity: unique("notifications_kind_entity_unique").on(
+      table.kind,
+      table.entityId
+    ),
+  })
+);
+
 export type ResourceLink = typeof resourceLinks.$inferSelect;
 export type PageContentRow = typeof pageContent.$inferSelect;
 export type Agent = typeof agents.$inferSelect;
 export type Listing = typeof listings.$inferSelect;
+export type Wishlist = typeof wishlists.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
 
 /** A listing joined with its posting agent's name (phone is never included). */
 export type ListingWithAgent = Listing & { agentName: string };
+export type WishlistWithAgent = Wishlist & { agentName: string };

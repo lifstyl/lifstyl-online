@@ -5,6 +5,8 @@ import { AddListingPanel } from "@/components/exclusives/add-listing-panel";
 import { ListingCard } from "@/components/exclusives/listing-card";
 import { getSessionInfo } from "@/auth";
 import { getListings } from "@/lib/content";
+import { expiryLabel, daysUntilExpiry } from "@/lib/expiry";
+import { EXPIRY_WARNING_DAYS, LISTING_TTL_DAYS } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +31,7 @@ export default async function OfficeExclusivesPage({
         title="Office Exclusives"
         intro={
           signedIn
-            ? "Listings shared by Lifstyl agents. Post your own so the office sees it first."
+            ? `Listings shared by Lifstyl agents. Post your own so the office sees it first. Listings come down automatically after ${LISTING_TTL_DAYS} days.`
             : undefined
         }
       />
@@ -61,6 +63,11 @@ export default async function OfficeExclusivesPage({
                       canManage={
                         session.canManageAllListings ||
                         listing.agentId === session.agentId
+                      }
+                      expiry={expiryLabel(listing.createdAt, "listing")}
+                      expiringSoon={
+                        daysUntilExpiry(listing.createdAt, "listing") <=
+                        EXPIRY_WARNING_DAYS
                       }
                     />
                   ))}

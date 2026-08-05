@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql, isNull } from "drizzle-orm";
 import { db } from "./db";
 import {
   carouselImages,
@@ -13,12 +13,15 @@ import {
   pageContent,
   agents,
   listings,
+  wishlists,
+  notifications,
 } from "./db/schema";
 import { saveImage, isImageFile } from "./upload";
 import { getSessionInfo } from "@/auth";
 import { normalizePhone, phoneLookupKey } from "./phone";
 import { parseRoster } from "./roster";
 import { runMigrations } from "./db/maintenance";
+import { notifyAdmin, pruneNotificationsFor } from "./notify";
 import bcrypt from "bcryptjs";
 
 async function requireAdmin() {
@@ -406,13 +409,23 @@ export async function addListing(formData: FormData) {
   const file = formData.get("image");
   const imageUrl = isImageFile(file) ? await saveImage(file) : null;
 
-  await db.insert(listings).values({
-    agentId: info.agentId,
-    imageUrl,
-    ...listingFieldsFrom(formData),
+  const fields = listingFieldsFrom(formData);
+  const [created] = await db
+    .insert(listings)
+    .values({ agentId: info.agentId, imageUrl, ...fields })
+    .returning({ id: listings.id });
+
+  await notifyAdmin({
+    kind: "new_listing",
+    entityId: created.id,
+    title: "New Office Exclusive Listing",
+    detail: `${info.name}: ${fields.streetNumber} ${fields.streetName}, ${fields.city}`,
+    href: "/admin/office-exclusives",
   });
+
   revalidatePath("/office-exclusives");
   revalidatePath("/admin/office-exclusives");
+  revalidatePath("/admin/notifications");
 }
 
 export async function updateListing(formData: FormData) {
@@ -454,8 +467,97 @@ export async function deleteListing(formData: FormData) {
   }
 
   await db.delete(listings).where(eq(listings.id, id));
+  await pruneNotificationsFor(["new_listing", "listing_expiring"], [id]);
   revalidatePath("/office-exclusives");
   revalidatePath("/admin/office-exclusives");
+  revalidatePath("/admin/notifications");
+}
+
+// ─────────────────────────────────────────────────────────────
+// BUYER WISHLISTS
+// ─────────────────────────────────────────────────────────────
+export async function addWishlist(formData: FormData) {
+  const info = await requireExclusivesAccess();
+  if (!info.agentId) throw new Error("Only agents can post wishlists.");
+
+  const body = str(formData, "body");
+  if (!body) throw new Error("Write what your buyer is looking for.");
+
+  const [created] = await db
+    .insert(wishlists)
+    .values({ agentId: info.agentId, body })
+    .returning({ id: wishlists.id });
+
+  await notifyAdmin({
+    kind: "new_wishlist",
+    entityId: created.id,
+    title: "New Buyer Wishlist post",
+    detail: `${info.name}: ${body.slice(0, 120)}${body.length > 120 ? "…" : ""}`,
+    href: "/buyer-wishlists",
+  });
+
+  revalidatePath("/buyer-wishlists");
+  revalidatePath("/admin/notifications");
+}
+
+export async function updateWishlist(formData: FormData) {
+  const info = await requireExclusivesAccess();
+  const id = num(formData, "id");
+  const body = str(formData, "body");
+  if (!body) throw new Error("Write what your buyer is looking for.");
+
+  const existing = await db
+    .select()
+    .from(wishlists)
+    .where(eq(wishlists.id, id))
+    .limit(1);
+  if (!existing[0]) throw new Error("Wishlist not found.");
+  if (!info.canManageAllListings && existing[0].agentId !== info.agentId) {
+    throw new Error("You can only edit your own wishlists.");
+  }
+
+  await db.update(wishlists).set({ body }).where(eq(wishlists.id, id));
+  revalidatePath("/buyer-wishlists");
+}
+
+export async function deleteWishlist(formData: FormData) {
+  const info = await requireExclusivesAccess();
+  const id = num(formData, "id");
+
+  const existing = await db
+    .select()
+    .from(wishlists)
+    .where(eq(wishlists.id, id))
+    .limit(1);
+  if (!existing[0]) return;
+  if (!info.canManageAllListings && existing[0].agentId !== info.agentId) {
+    throw new Error("You can only remove your own wishlists.");
+  }
+
+  await db.delete(wishlists).where(eq(wishlists.id, id));
+  await pruneNotificationsFor(["new_wishlist", "wishlist_expiring"], [id]);
+  revalidatePath("/buyer-wishlists");
+  revalidatePath("/admin/notifications");
+}
+
+// ─────────────────────────────────────────────────────────────
+// NOTIFICATIONS (admin only)
+// ─────────────────────────────────────────────────────────────
+export async function markNotificationsRead() {
+  await requireAdmin();
+  await db
+    .update(notifications)
+    .set({ readAt: new Date() })
+    .where(isNull(notifications.readAt));
+  revalidatePath("/admin/notifications");
+  revalidatePath("/admin");
+}
+
+export async function clearNotifications() {
+  await requireAdmin();
+  await db.delete(notifications);
+  revalidatePath("/admin/notifications");
+  revalidatePath("/admin");
 }
 
 // ─────────────────────────────────────────────────────────────

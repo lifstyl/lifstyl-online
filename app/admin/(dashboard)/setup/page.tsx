@@ -70,6 +70,20 @@ export default async function AdminSetupPage({
               value={status.listingsTable ? "ready" : "missing"}
             />
             <Row
+              label="Wishlists &amp; notifications"
+              ok={
+                !status.missingTables.includes("wishlists") &&
+                !status.missingTables.includes("notifications")
+              }
+              value={
+                status.missingTables.filter((t) =>
+                  ["wishlists", "notifications"].includes(t)
+                ).length === 0
+                  ? "ready"
+                  : "missing"
+              }
+            />
+            <Row
               label="Required columns"
               ok={status.agentsTable && status.missingColumns.length === 0}
               value={

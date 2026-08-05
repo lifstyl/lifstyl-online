@@ -23,6 +23,8 @@ export type DbStatus = {
   ok: boolean;
   agentsTable: boolean;
   listingsTable: boolean;
+  /** Tables the app needs that aren't there yet. */
+  missingTables: string[];
   missingColumns: string[];
   agentCount: number | null;
   listingCount: number | null;
@@ -30,6 +32,8 @@ export type DbStatus = {
   authSecretSet: boolean;
   error?: string;
 };
+
+const REQUIRED_TABLES = ["agents", "listings", "wishlists", "notifications"];
 
 const REQUIRED_AGENT_COLUMNS = [
   "id",
@@ -46,6 +50,7 @@ export async function getDbStatus(): Promise<DbStatus> {
     ok: false,
     agentsTable: false,
     listingsTable: false,
+    missingTables: [...REQUIRED_TABLES],
     missingColumns: [],
     agentCount: null,
     listingCount: null,
@@ -59,13 +64,16 @@ export async function getDbStatus(): Promise<DbStatus> {
 
     const cols = await sql<{ table_name: string; column_name: string }[]>`
       SELECT table_name, column_name FROM information_schema.columns
-      WHERE table_name IN ('agents', 'listings')`;
+      WHERE table_name IN ('agents', 'listings', 'wishlists', 'notifications')`;
+
+    const present = new Set(cols.map((c) => c.table_name));
+    base.missingTables = REQUIRED_TABLES.filter((t) => !present.has(t));
 
     const agentCols = cols
       .filter((c) => c.table_name === "agents")
       .map((c) => c.column_name);
-    base.agentsTable = agentCols.length > 0;
-    base.listingsTable = cols.some((c) => c.table_name === "listings");
+    base.agentsTable = present.has("agents");
+    base.listingsTable = present.has("listings");
     base.missingColumns = base.agentsTable
       ? REQUIRED_AGENT_COLUMNS.filter((c) => !agentCols.includes(c))
       : [];
@@ -84,8 +92,7 @@ export async function getDbStatus(): Promise<DbStatus> {
       base.listingCount = count;
     }
 
-    base.ok =
-      base.agentsTable && base.listingsTable && base.missingColumns.length === 0;
+    base.ok = base.missingTables.length === 0 && base.missingColumns.length === 0;
   } catch (err) {
     base.error = err instanceof Error ? err.message : String(err);
   } finally {
@@ -150,6 +157,32 @@ const SCHEMA_STATEMENTS: string[] = [
      ALTER TABLE "listings" ADD CONSTRAINT "listings_agent_id_agents_id_fk"
        FOREIGN KEY ("agent_id") REFERENCES "agents"("id") ON DELETE CASCADE;
    EXCEPTION WHEN duplicate_object THEN NULL;
+   END $$`,
+  `CREATE TABLE IF NOT EXISTS "wishlists" (
+     "id" serial PRIMARY KEY NOT NULL,
+     "agent_id" integer NOT NULL,
+     "body" text NOT NULL,
+     "created_at" timestamp DEFAULT now() NOT NULL
+   )`,
+  `DO $$ BEGIN
+     ALTER TABLE "wishlists" ADD CONSTRAINT "wishlists_agent_id_agents_id_fk"
+       FOREIGN KEY ("agent_id") REFERENCES "agents"("id") ON DELETE CASCADE;
+   EXCEPTION WHEN duplicate_object THEN NULL;
+   END $$`,
+  `CREATE TABLE IF NOT EXISTS "notifications" (
+     "id" serial PRIMARY KEY NOT NULL,
+     "kind" text NOT NULL,
+     "title" text NOT NULL,
+     "detail" text DEFAULT '' NOT NULL,
+     "href" text DEFAULT '' NOT NULL,
+     "entity_id" integer DEFAULT 0 NOT NULL,
+     "created_at" timestamp DEFAULT now() NOT NULL,
+     "read_at" timestamp
+   )`,
+  `DO $$ BEGIN
+     ALTER TABLE "notifications" ADD CONSTRAINT "notifications_kind_entity_unique"
+       UNIQUE ("kind", "entity_id");
+   EXCEPTION WHEN duplicate_table THEN NULL; WHEN duplicate_object THEN NULL;
    END $$`,
 ];
 

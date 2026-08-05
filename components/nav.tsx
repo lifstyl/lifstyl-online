@@ -124,6 +124,9 @@ export function Nav() {
           <NavLink href="/office-exclusives" solid={solid}>
             Office Exclusives
           </NavLink>
+          <NavLink href="/buyer-wishlists" solid={solid}>
+            Buyer Wishlists
+          </NavLink>
           <NavLink href="/faqs" solid={solid}>
             FAQs
           </NavLink>
@@ -183,6 +186,7 @@ export function Nav() {
               </ul>
             </li>
             <MobileLink href="/office-exclusives">Office Exclusives</MobileLink>
+            <MobileLink href="/buyer-wishlists">Buyer Wishlists</MobileLink>
             <MobileLink href="/faqs">FAQs</MobileLink>
             <MobileLink href="/support-staff">Support Staff</MobileLink>
           </ul>
