@@ -18,13 +18,13 @@ export default async function SupportStaffPage() {
       <section className="bg-white">
         <div className="mx-auto max-w-content px-6 pb-24 sm:px-10">
           {staff.length > 0 ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-6 sm:grid-cols-2">
               {staff.map((member) => (
                 <div
                   key={member.id}
                   className="flex flex-col overflow-hidden rounded-sm border border-border bg-pure-white"
                 >
-                  <div className="aspect-[4/3] w-full bg-white">
+                  <div className="aspect-[3/4] w-full bg-white">
                     {member.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img

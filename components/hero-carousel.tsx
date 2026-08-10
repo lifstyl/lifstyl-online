@@ -31,23 +31,27 @@ export function HeroCarousel({ images }: { images: CarouselImage[] }) {
   }
 
   return (
-    <div className="relative mx-auto mt-10 h-[320px] w-full max-w-3xl overflow-hidden sm:h-[420px] md:h-[480px]">
-      {images.map((img, i) => (
-        // Full image shown uncropped (object-contain); any letterbox gap
-        // shows the hero's own navy gradient behind this transparent box.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          key={img.id}
-          src={img.url}
-          alt={img.altText}
-          className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-1000 ${
-            i === active ? "opacity-100" : "opacity-0"
-          }`}
-        />
-      ))}
+    <div className="mx-auto mt-10 w-full max-w-3xl">
+      <div className="relative h-[320px] w-full overflow-hidden sm:h-[420px] md:h-[480px]">
+        {images.map((img, i) => (
+          // Full image shown uncropped (object-contain); any letterbox gap
+          // shows the hero's own navy gradient behind this transparent box.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={img.id}
+            src={img.url}
+            alt={img.altText}
+            className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-1000 ${
+              i === active ? "opacity-100" : "opacity-0"
+            }`}
+          />
+        ))}
+      </div>
 
+      {/* Sits under the photo rather than over it, so it never covers part
+          of the image. */}
       {images.length > 1 && (
-        <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 gap-2">
+        <div className="mt-4 flex justify-center gap-2">
           {images.map((img, i) => (
             <button
               key={img.id}

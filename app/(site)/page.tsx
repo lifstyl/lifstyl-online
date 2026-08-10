@@ -1,25 +1,15 @@
 import { HeroCarousel } from "@/components/hero-carousel";
 import { HeroWaves } from "@/components/hero-waves";
 import { CalendarEmbed } from "@/components/calendar-embed";
-import {
-  getCarouselImages,
-  getTestimonials,
-  getPageContent,
-} from "@/lib/content";
+import { getCarouselImages, getPageContent } from "@/lib/content";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [images, testimonials, content] = await Promise.all([
+  const [images, content] = await Promise.all([
     getCarouselImages(),
-    getTestimonials(),
     getPageContent("home"),
   ]);
-
-  const aboutParagraphs = (content.aboutBody ?? "")
-    .split("\n")
-    .map((p) => p.trim())
-    .filter(Boolean);
 
   return (
     <>
@@ -60,62 +50,6 @@ export default async function HomePage() {
           <CalendarEmbed url={content.calendarEmbedUrl} />
         </div>
       </section>
-
-      {/* ── ABOUT LIFSTYL ────────────────────────────────── */}
-      <section className="bg-navy text-white">
-        <div className="mx-auto grid max-w-content gap-10 px-6 py-20 sm:px-10 lg:grid-cols-[0.9fr_1.1fr]">
-          <div>
-            <span className="section-tag" style={{ color: "var(--gold-light)" }}>
-              Who we are
-            </span>
-            <h2 className="mt-4 font-serif text-3xl text-pure-white sm:text-4xl">
-              {content.aboutHeading ?? "About Lifstyl"}
-            </h2>
-          </div>
-          <div className="flex flex-col gap-4 text-[15px] leading-relaxed text-white/80">
-            {aboutParagraphs.map((p, i) => (
-              <p key={i}>{p}</p>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── TESTIMONIALS ─────────────────────────────────── */}
-      {testimonials.length > 0 && (
-        <section className="bg-white">
-          <div className="mx-auto max-w-content px-6 py-20 sm:px-10">
-            <div className="mb-10 text-center">
-              <span className="section-tag justify-center">In their words</span>
-              <h2 className="mt-4 font-serif text-3xl text-navy sm:text-4xl">
-                Agent Testimonials
-              </h2>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2">
-              {testimonials.map((t) => (
-                <figure
-                  key={t.id}
-                  className="flex flex-col rounded-sm border border-border border-t-2 border-t-gold bg-pure-white p-8"
-                >
-                  <blockquote className="flex-1 text-[15px] leading-relaxed text-text-body">
-                    “{t.quote}”
-                  </blockquote>
-                  <figcaption className="mt-6 flex items-center gap-3">
-                    {t.photoUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={t.photoUrl}
-                        alt={t.name}
-                        className="h-11 w-11 rounded-full object-cover"
-                      />
-                    )}
-                    <span className="font-serif text-lg text-navy">{t.name}</span>
-                  </figcaption>
-                </figure>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ── CTA ──────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-navy-deep">
