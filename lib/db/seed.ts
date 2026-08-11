@@ -177,23 +177,30 @@ async function main() {
     {
       pageSlug: "recommendations-for-marketing-materials",
       groupLabel: "Business Cards",
+      title: "Canva",
+      url: "https://www.canva.com/",
+      sortOrder: 0,
+    },
+    {
+      pageSlug: "recommendations-for-marketing-materials",
+      groupLabel: "Business Cards",
       title: "The Personal Marketing Company",
       url: "https://www.tpmco.com/",
-      sortOrder: 0,
+      sortOrder: 1,
     },
     {
       pageSlug: "recommendations-for-marketing-materials",
       groupLabel: "For Sale Signs",
       title: "Lowen Signs",
       url: "https://www.lowensign.com/",
-      sortOrder: 1,
+      sortOrder: 2,
     },
     {
       pageSlug: "recommendations-for-marketing-materials",
       groupLabel: "For Sale Signs",
       title: "Fast Signs",
       url: "https://www.fastsigns.com/",
-      sortOrder: 2,
+      sortOrder: 3,
     },
   ]);
 
