@@ -10,7 +10,7 @@ import { SubmitButton } from "@/components/admin/ui";
 export function AgentLogin({
   error,
   redirectTo = "/office-exclusives",
-  blurb = "Office Exclusives is private to Lifstyl agents. Sign in with your phone number.",
+  blurb = "Office Exclusives is private to Lifstyl agents.",
 }: {
   error?: string;
   redirectTo?: string;
@@ -51,7 +51,7 @@ export function AgentLogin({
           <input type="hidden" name="redirectTo" value={redirectTo} />
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-semibold uppercase tracking-wide text-text-muted">
-              Phone number
+              Password
             </span>
             <input
               name="phone"

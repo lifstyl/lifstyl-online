@@ -46,7 +46,7 @@ export default async function BuyerWishlistsPage({
             <AgentLogin
               error={searchParams.error}
               redirectTo={PATH}
-              blurb="Buyer Wishlists is private to Lifstyl agents. Sign in with your phone number."
+              blurb="Buyer Wishlists is private to Lifstyl agents."
             />
           ) : (
             <>
