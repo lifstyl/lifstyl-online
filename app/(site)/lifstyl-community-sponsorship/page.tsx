@@ -14,8 +14,7 @@ export const metadata = {
  */
 const DEFAULT_INTRO =
   "Lifstyl offers two sponsorship per month that are on a first come, first served basis.";
-const DEFAULT_FORM_URL =
-  "https://docs.google.com/forms/d/e/1FAIpQLSexmya_bEsZSVIVwV6YCbvi4ScfmXbWlYWdJrPJIqZiVeawOQ/viewform?usp=header";
+const DEFAULT_FORM_URL = "https://forms.gle/VbVPE1N8QdYLqrM96";
 const DEFAULT_BUTTON_LABEL = "Submit Today";
 
 export default async function CommunitySponsorshipPage() {

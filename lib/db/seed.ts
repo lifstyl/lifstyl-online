@@ -230,8 +230,7 @@ async function main() {
     {
       pageSlug: "lifstyl-community-sponsorship",
       key: "formUrl",
-      value:
-        "https://docs.google.com/forms/d/e/1FAIpQLSexmya_bEsZSVIVwV6YCbvi4ScfmXbWlYWdJrPJIqZiVeawOQ/viewform?usp=header",
+      value: "https://forms.gle/VbVPE1N8QdYLqrM96",
     },
     {
       pageSlug: "lifstyl-community-sponsorship",

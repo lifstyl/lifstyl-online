@@ -39,7 +39,7 @@ export default async function AdminCommunitySponsorshipPage() {
               name="kv:formUrl"
               defaultValue={content.formUrl ?? ""}
               className={inputClass}
-              placeholder="https://docs.google.com/forms/…"
+              placeholder="https://forms.gle/…"
             />
           </Field>
           <Field label="Button text" hint="Defaults to “Submit Today”.">
