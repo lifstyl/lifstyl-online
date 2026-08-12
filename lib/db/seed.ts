@@ -219,6 +219,27 @@ async function main() {
     },
   ]);
 
+  // ── Lifstyl Community Sponsorship ───────────────────────────
+  await db.insert(pageContent).values([
+    {
+      pageSlug: "lifstyl-community-sponsorship",
+      key: "intro",
+      value:
+        "Lifstyl offers two sponsorship per month that are on a first come, first served basis.",
+    },
+    {
+      pageSlug: "lifstyl-community-sponsorship",
+      key: "formUrl",
+      value:
+        "https://docs.google.com/forms/d/e/1FAIpQLSexmya_bEsZSVIVwV6YCbvi4ScfmXbWlYWdJrPJIqZiVeawOQ/viewform?usp=header",
+    },
+    {
+      pageSlug: "lifstyl-community-sponsorship",
+      key: "buttonLabel",
+      value: "Submit Today",
+    },
+  ]);
+
   console.log("✓ Seed complete.");
   await client.end();
 }

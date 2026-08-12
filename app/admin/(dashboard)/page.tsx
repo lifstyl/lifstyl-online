@@ -22,6 +22,11 @@ const cards = [
     desc: "Intro text and the room-booking link.",
   },
   {
+    href: "/admin/community-sponsorship",
+    title: "Community Sponsorship",
+    desc: "Intro text and the sponsorship form link.",
+  },
+  {
     href: "/admin/office-exclusives",
     title: "Office Exclusives",
     desc: "Every listing agents have posted. Edit or remove any of them.",

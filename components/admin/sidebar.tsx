@@ -9,6 +9,7 @@ const links = [
   { href: "/admin/faqs", label: "FAQs" },
   { href: "/admin/quarterly-meetings", label: "Quarterly Meetings" },
   { href: "/admin/book-a-room", label: "Book a Conference Room" },
+  { href: "/admin/community-sponsorship", label: "Community Sponsorship" },
   { href: "/admin/office-exclusives", label: "Office Exclusives" },
   { href: "/admin/exclusive-agents", label: "Exclusive Agents" },
   { href: "/admin/marketing-materials", label: "Marketing Materials" },

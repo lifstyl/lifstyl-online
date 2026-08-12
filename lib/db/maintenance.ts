@@ -211,27 +211,34 @@ const SCHEMA_STATEMENTS: string[] = [
  */
 export async function runMigrations(): Promise<{ note?: string }> {
   const client = connection();
+  let note: string | undefined;
+
   try {
     try {
       await migrate(drizzle(client), {
         migrationsFolder: path.join(process.cwd(), "drizzle"),
       });
-      return {};
     } catch (migratorError) {
       const reason =
         migratorError instanceof Error
           ? migratorError.message
           : String(migratorError);
-
-      for (const statement of SCHEMA_STATEMENTS) {
-        await client.unsafe(statement);
-      }
-      return {
-        note:
-          "Applied directly, because the standard migration step couldn't run " +
-          `(${reason}). The database is up to date either way.`,
-      };
+      note =
+        "The standard migration step couldn't run " +
+        `(${reason}), so the tables were built directly instead.`;
     }
+
+    // Always run these, even when the migrator reported success. The migrator
+    // decides what to do from its own record of past migrations, so if that
+    // record and the real schema ever drift apart it will skip work the
+    // database still needs — and a page then breaks on a missing column with
+    // the update button insisting everything is fine. These statements check
+    // the schema itself and are all no-ops when there's nothing to add.
+    for (const statement of SCHEMA_STATEMENTS) {
+      await client.unsafe(statement);
+    }
+
+    return { note };
   } finally {
     await client.end().catch(() => {});
   }

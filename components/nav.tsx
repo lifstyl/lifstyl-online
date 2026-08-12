@@ -9,6 +9,10 @@ const brokerageResources = [
   { label: "Quarterly Meeting Materials", href: "/quarterly-meeting-materials" },
   { label: "Book a Conference Room", href: "/book-a-conference-room" },
   {
+    label: "Lifstyl Community Sponsorship",
+    href: "/lifstyl-community-sponsorship",
+  },
+  {
     label: "Recommendations For Marketing Materials",
     href: "/recommendations-for-marketing-materials",
   },

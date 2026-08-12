@@ -25,7 +25,33 @@ export async function getTestimonials() {
 }
 
 export async function getFaqs() {
-  return db.select().from(faqs).orderBy(asc(faqs.sortOrder));
+  try {
+    return await db.select().from(faqs).orderBy(asc(faqs.sortOrder));
+  } catch (err) {
+    // A deploy goes live before the admin runs the database update on the
+    // Setup page, so for that window the code selects columns the database
+    // doesn't have yet. Losing the whole FAQs page over an optional link is
+    // far worse than showing the questions without it, so fall back to the
+    // columns that have always existed.
+    if (!isUndefinedColumn(err)) throw err;
+    const rows = await db
+      .select({
+        id: faqs.id,
+        question: faqs.question,
+        answer: faqs.answer,
+        sortOrder: faqs.sortOrder,
+      })
+      .from(faqs)
+      .orderBy(asc(faqs.sortOrder));
+    return rows.map((r) => ({ ...r, linkUrl: "", linkLabel: "" }));
+  }
+}
+
+/** Postgres 42703 — a selected column isn't in the table yet. */
+function isUndefinedColumn(err: unknown): boolean {
+  const code = (err as { code?: string; cause?: { code?: string } })?.code;
+  const causeCode = (err as { cause?: { code?: string } })?.cause?.code;
+  return code === "42703" || causeCode === "42703";
 }
 
 export async function getStaffMembers() {
