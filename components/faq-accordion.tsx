@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Faq } from "@/lib/db/schema";
+import { linkifyAnswer } from "@/lib/links";
 
 export function FaqAccordion({ faqs }: { faqs: Faq[] }) {
   const [open, setOpen] = useState<number | null>(faqs[0]?.id ?? null);
@@ -43,9 +44,36 @@ export function FaqAccordion({ faqs }: { faqs: Faq[] }) {
               }`}
             >
               <div className="overflow-hidden">
-                <p className="whitespace-pre-line px-6 pb-6 text-[15px] leading-relaxed text-text-body">
-                  {faq.answer}
-                </p>
+                <div className="px-6 pb-6">
+                  <p className="whitespace-pre-line text-[15px] leading-relaxed text-text-body">
+                    {linkifyAnswer(faq.answer).map((part, i) =>
+                      part.type === "link" ? (
+                        <a
+                          key={i}
+                          href={part.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-navy underline decoration-gold underline-offset-2 hover:text-gold"
+                        >
+                          {part.value}
+                        </a>
+                      ) : (
+                        part.value
+                      )
+                    )}
+                  </p>
+
+                  {faq.linkUrl && (
+                    <a
+                      href={faq.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn-gold mt-4 inline-flex"
+                    >
+                      {faq.linkLabel || "Open Link"}
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>

@@ -46,6 +46,10 @@ export const faqs = pgTable("faqs", {
   id: serial("id").primaryKey(),
   question: text("question").notNull(),
   answer: text("answer").notNull(),
+  // Optional button-style link shown under the answer. URLs typed inside the
+  // answer itself are turned into links too — see linkifyAnswer in lib/links.ts.
+  linkUrl: text("link_url").notNull().default(""),
+  linkLabel: text("link_label").notNull().default(""),
   sortOrder: integer("sort_order").notNull().default(0),
 });
 

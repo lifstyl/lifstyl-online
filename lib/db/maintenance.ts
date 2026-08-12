@@ -26,6 +26,8 @@ export type DbStatus = {
   /** Tables the app needs that aren't there yet. */
   missingTables: string[];
   missingColumns: string[];
+  /** FAQ answer-link columns, added after FAQs already existed in production. */
+  faqLinksReady: boolean;
   agentCount: number | null;
   listingCount: number | null;
   managers: string[];
@@ -52,6 +54,7 @@ export async function getDbStatus(): Promise<DbStatus> {
     listingsTable: false,
     missingTables: [...REQUIRED_TABLES],
     missingColumns: [],
+    faqLinksReady: false,
     agentCount: null,
     listingCount: null,
     managers: [],
@@ -64,7 +67,7 @@ export async function getDbStatus(): Promise<DbStatus> {
 
     const cols = await sql<{ table_name: string; column_name: string }[]>`
       SELECT table_name, column_name FROM information_schema.columns
-      WHERE table_name IN ('agents', 'listings', 'wishlists', 'notifications')`;
+      WHERE table_name IN ('agents', 'listings', 'wishlists', 'notifications', 'faqs')`;
 
     const present = new Set(cols.map((c) => c.table_name));
     base.missingTables = REQUIRED_TABLES.filter((t) => !present.has(t));
@@ -77,6 +80,12 @@ export async function getDbStatus(): Promise<DbStatus> {
     base.missingColumns = base.agentsTable
       ? REQUIRED_AGENT_COLUMNS.filter((c) => !agentCols.includes(c))
       : [];
+
+    const faqCols = cols
+      .filter((c) => c.table_name === "faqs")
+      .map((c) => c.column_name);
+    base.faqLinksReady =
+      faqCols.includes("link_url") && faqCols.includes("link_label");
 
     if (base.agentsTable && base.missingColumns.length === 0) {
       const [{ count }] = await sql<{ count: number }[]>`
@@ -92,7 +101,10 @@ export async function getDbStatus(): Promise<DbStatus> {
       base.listingCount = count;
     }
 
-    base.ok = base.missingTables.length === 0 && base.missingColumns.length === 0;
+    base.ok =
+      base.missingTables.length === 0 &&
+      base.missingColumns.length === 0 &&
+      base.faqLinksReady;
   } catch (err) {
     base.error = err instanceof Error ? err.message : String(err);
   } finally {
@@ -158,6 +170,9 @@ const SCHEMA_STATEMENTS: string[] = [
        FOREIGN KEY ("agent_id") REFERENCES "agents"("id") ON DELETE CASCADE;
    EXCEPTION WHEN duplicate_object THEN NULL;
    END $$`,
+  // FAQ answer links — added after the FAQs table already existed in prod.
+  `ALTER TABLE "faqs" ADD COLUMN IF NOT EXISTS "link_url" text DEFAULT '' NOT NULL`,
+  `ALTER TABLE "faqs" ADD COLUMN IF NOT EXISTS "link_label" text DEFAULT '' NOT NULL`,
   `CREATE TABLE IF NOT EXISTS "wishlists" (
      "id" serial PRIMARY KEY NOT NULL,
      "agent_id" integer NOT NULL,

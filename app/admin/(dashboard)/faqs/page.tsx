@@ -24,8 +24,28 @@ export default async function AdminFaqsPage() {
           <Field label="Question">
             <input name="question" required className={inputClass} />
           </Field>
-          <Field label="Answer">
+          <Field
+            label="Answer"
+            hint="Any web address typed here becomes a clickable link automatically."
+          >
             <textarea name="answer" required rows={3} className={inputClass} />
+          </Field>
+          <Field
+            label="Link (optional)"
+            hint="Shows as a gold button under the answer. Paste the address — canva.com works as well as https://canva.com."
+          >
+            <input
+              name="linkUrl"
+              className={inputClass}
+              placeholder="https://example.com"
+            />
+          </Field>
+          <Field label="Link button text (optional)" hint="Defaults to “Open Link”.">
+            <input
+              name="linkLabel"
+              className={inputClass}
+              placeholder="e.g. Watch the Video Tutorial"
+            />
           </Field>
           <div>
             <SubmitButton>Add question</SubmitButton>
@@ -47,13 +67,38 @@ export default async function AdminFaqsPage() {
                   className={inputClass}
                 />
               </Field>
-              <Field label="Answer">
+              <Field
+                label="Answer"
+                hint="Any web address typed here becomes a clickable link automatically."
+              >
                 <textarea
                   name="answer"
                   defaultValue={faq.answer}
                   required
                   rows={3}
                   className={inputClass}
+                />
+              </Field>
+              <Field
+                label="Link (optional)"
+                hint="Shows as a gold button under the answer."
+              >
+                <input
+                  name="linkUrl"
+                  defaultValue={faq.linkUrl}
+                  className={inputClass}
+                  placeholder="https://example.com"
+                />
+              </Field>
+              <Field
+                label="Link button text (optional)"
+                hint="Defaults to “Open Link”."
+              >
+                <input
+                  name="linkLabel"
+                  defaultValue={faq.linkLabel}
+                  className={inputClass}
+                  placeholder="e.g. Watch the Video Tutorial"
                 />
               </Field>
               <div>

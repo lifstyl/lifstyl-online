@@ -95,6 +95,11 @@ export default async function AdminSetupPage({
               }
             />
             <Row
+              label="FAQ answer links"
+              ok={status.faqLinksReady}
+              value={status.faqLinksReady ? "ready" : "missing"}
+            />
+            <Row
               label="Sign-in secret"
               ok={status.authSecretSet}
               value={status.authSecretSet ? "configured" : "AUTH_SECRET not set"}

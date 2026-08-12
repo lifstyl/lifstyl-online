@@ -19,6 +19,7 @@ import {
 import { saveImage, isImageFile } from "./upload";
 import { getSessionInfo } from "@/auth";
 import { normalizePhone, phoneLookupKey } from "./phone";
+import { normalizeUrl } from "./links";
 import { parseRoster } from "./roster";
 import { runMigrations } from "./db/maintenance";
 import { notifyAdmin, pruneNotificationsFor } from "./notify";
@@ -186,6 +187,8 @@ export async function addFaq(formData: FormData) {
   await db.insert(faqs).values({
     question: str(formData, "question"),
     answer: str(formData, "answer"),
+    linkUrl: normalizeUrl(str(formData, "linkUrl")),
+    linkLabel: str(formData, "linkLabel"),
     sortOrder: await nextSortOrder(faqs),
   });
   revalidatePath("/faqs");
@@ -196,7 +199,12 @@ export async function updateFaq(formData: FormData) {
   await requireAdmin();
   await db
     .update(faqs)
-    .set({ question: str(formData, "question"), answer: str(formData, "answer") })
+    .set({
+      question: str(formData, "question"),
+      answer: str(formData, "answer"),
+      linkUrl: normalizeUrl(str(formData, "linkUrl")),
+      linkLabel: str(formData, "linkLabel"),
+    })
     .where(eq(faqs.id, num(formData, "id")));
   revalidatePath("/faqs");
   revalidatePath("/admin/faqs");
