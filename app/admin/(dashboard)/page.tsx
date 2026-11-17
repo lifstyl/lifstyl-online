@@ -27,6 +27,11 @@ const cards = [
     desc: "Intro text and the sponsorship form link.",
   },
   {
+    href: "/admin/contractors",
+    title: "Contractors & Vendors",
+    desc: "The directory of companies and individuals the team works with.",
+  },
+  {
     href: "/admin/office-exclusives",
     title: "Office Exclusives",
     desc: "Every listing agents have posted. Edit or remove any of them.",

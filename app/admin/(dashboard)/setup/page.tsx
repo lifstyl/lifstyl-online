@@ -95,6 +95,15 @@ export default async function AdminSetupPage({
               }
             />
             <Row
+              label="Contractors &amp; vendors"
+              ok={!status.missingTables.includes("contractors")}
+              value={
+                status.missingTables.includes("contractors")
+                  ? "missing"
+                  : "ready"
+              }
+            />
+            <Row
               label="FAQ answer links"
               ok={status.faqLinksReady}
               value={status.faqLinksReady ? "ready" : "missing"}

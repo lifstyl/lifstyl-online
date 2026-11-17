@@ -16,6 +16,7 @@ const brokerageResources = [
     label: "Recommendations For Marketing Materials",
     href: "/recommendations-for-marketing-materials",
   },
+  { label: "Contractors & Vendors", href: "/contractors-and-vendors" },
 ];
 
 export function Nav() {

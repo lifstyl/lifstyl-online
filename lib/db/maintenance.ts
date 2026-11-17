@@ -35,7 +35,13 @@ export type DbStatus = {
   error?: string;
 };
 
-const REQUIRED_TABLES = ["agents", "listings", "wishlists", "notifications"];
+const REQUIRED_TABLES = [
+  "agents",
+  "listings",
+  "wishlists",
+  "notifications",
+  "contractors",
+];
 
 const REQUIRED_AGENT_COLUMNS = [
   "id",
@@ -67,7 +73,7 @@ export async function getDbStatus(): Promise<DbStatus> {
 
     const cols = await sql<{ table_name: string; column_name: string }[]>`
       SELECT table_name, column_name FROM information_schema.columns
-      WHERE table_name IN ('agents', 'listings', 'wishlists', 'notifications', 'faqs')`;
+      WHERE table_name IN ('agents', 'listings', 'wishlists', 'notifications', 'faqs', 'contractors')`;
 
     const present = new Set(cols.map((c) => c.table_name));
     base.missingTables = REQUIRED_TABLES.filter((t) => !present.has(t));
@@ -170,6 +176,14 @@ const SCHEMA_STATEMENTS: string[] = [
        FOREIGN KEY ("agent_id") REFERENCES "agents"("id") ON DELETE CASCADE;
    EXCEPTION WHEN duplicate_object THEN NULL;
    END $$`,
+  `CREATE TABLE IF NOT EXISTS "contractors" (
+     "id" serial PRIMARY KEY NOT NULL,
+     "name" text NOT NULL,
+     "phone" text DEFAULT '' NOT NULL,
+     "email" text DEFAULT '' NOT NULL,
+     "description" text DEFAULT '' NOT NULL,
+     "sort_order" integer DEFAULT 0 NOT NULL
+   )`,
   // FAQ answer links — added after the FAQs table already existed in prod.
   `ALTER TABLE "faqs" ADD COLUMN IF NOT EXISTS "link_url" text DEFAULT '' NOT NULL`,
   `ALTER TABLE "faqs" ADD COLUMN IF NOT EXISTS "link_label" text DEFAULT '' NOT NULL`,

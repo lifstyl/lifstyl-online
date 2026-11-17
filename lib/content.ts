@@ -1,5 +1,7 @@
 import "server-only";
 import { asc, desc, eq, and, gt, isNull, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import { db } from "./db";
 import {
   carouselImages,
@@ -12,8 +14,13 @@ import {
   listings,
   wishlists,
   notifications,
+  contractors,
 } from "./db/schema";
-import type { ListingWithAgent, WishlistWithAgent } from "./db/schema";
+import type {
+  ListingWithAgent,
+  WishlistWithAgent,
+  Contractor,
+} from "./db/schema";
 import { expiryCutoff } from "./expiry";
 
 export async function getCarouselImages() {
@@ -49,9 +56,57 @@ export async function getFaqs() {
 
 /** Postgres 42703 — a selected column isn't in the table yet. */
 function isUndefinedColumn(err: unknown): boolean {
-  const code = (err as { code?: string; cause?: { code?: string } })?.code;
-  const causeCode = (err as { cause?: { code?: string } })?.cause?.code;
-  return code === "42703" || causeCode === "42703";
+  return hasPgCode(err, "42703");
+}
+
+/** Postgres 42P01 — the table itself doesn't exist yet. */
+function isUndefinedTable(err: unknown): boolean {
+  return hasPgCode(err, "42P01");
+}
+
+function hasPgCode(err: unknown, code: string): boolean {
+  const e = err as { code?: string; cause?: { code?: string } };
+  return e?.code === code || e?.cause?.code === code;
+}
+
+/**
+ * Contractors & vendors, A–Z. Used by the admin screen, where a stable,
+ * predictable order is what makes an entry findable.
+ */
+export async function getContractors(): Promise<Contractor[] | null> {
+  return selectContractors(asc(contractors.name));
+}
+
+/**
+ * The same list in a fresh random order on every request.
+ *
+ * The public directory is a list of businesses competing for the same calls,
+ * so a fixed order would quietly hand whoever sits at the top a permanent
+ * advantage. Shuffling per request keeps it even-handed.
+ *
+ * Randomised in SQL rather than in JS so the shuffle covers the whole table
+ * rather than a page of it, and the page is `force-dynamic`, so this really
+ * does re-run per visitor instead of being rendered once and cached.
+ */
+export async function getContractorsRandomized(): Promise<Contractor[] | null> {
+  return selectContractors(sql`random()`);
+}
+
+/**
+ * Returns null rather than throwing when the table hasn't been created yet —
+ * a deploy goes live before the admin runs the database update on the Setup
+ * page, and a brand-new page 500ing in that window is exactly what happened
+ * when FAQs gained a column. Callers show a setup hint instead.
+ */
+async function selectContractors(
+  order: SQL | PgColumn
+): Promise<Contractor[] | null> {
+  try {
+    return await db.select().from(contractors).orderBy(order);
+  } catch (err) {
+    if (isUndefinedTable(err)) return null;
+    throw err;
+  }
 }
 
 export async function getStaffMembers() {

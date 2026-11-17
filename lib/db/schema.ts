@@ -66,6 +66,20 @@ export const staffMembers = pgTable("staff_members", {
 });
 
 /**
+ * Contractors & vendors directory — companies and individuals agents can call
+ * on. Only the name is required; the rest are filled in when known, so they
+ * default to empty rather than being nullable.
+ */
+export const contractors = pgTable("contractors", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  phone: text("phone").notNull().default(""),
+  email: text("email").notNull().default(""),
+  description: text("description").notNull().default(""),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+/**
  * Generic grouped list of outbound links, reused across pages that are
  * essentially "a heading + some grouped links out":
  *   • pageSlug "quarterly-meeting-materials" — groupLabel = meeting date
@@ -189,6 +203,7 @@ export const notifications = pgTable(
   })
 );
 
+export type Contractor = typeof contractors.$inferSelect;
 export type ResourceLink = typeof resourceLinks.$inferSelect;
 export type PageContentRow = typeof pageContent.$inferSelect;
 export type Agent = typeof agents.$inferSelect;

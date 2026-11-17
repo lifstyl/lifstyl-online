@@ -13,6 +13,26 @@ export function normalizePhone(input: string): string {
 }
 
 /**
+ * Tidy a free-text phone number for display, e.g. "8595551212" renders as
+ * "(859) 555-1212".
+ *
+ * Anything that isn't a plain 10-digit US number — an extension, an
+ * international number, a note like "call after 5" — is returned exactly as
+ * typed rather than mangled into a shape it doesn't fit.
+ */
+export function formatPhoneForDisplay(input: string): string {
+  const raw = (input ?? "").trim();
+  const d = normalizePhone(raw);
+  if (d.length === 10) {
+    return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+  }
+  if (d.length === 11 && d.startsWith("1")) {
+    return `(${d.slice(1, 4)}) ${d.slice(4, 7)}-${d.slice(7)}`;
+  }
+  return raw;
+}
+
+/**
  * Deterministic lookup key for a phone number ("blind index").
  *
  * Sign-in is by phone alone, so we must find the agent *before* we can verify

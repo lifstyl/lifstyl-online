@@ -15,6 +15,7 @@ import {
   listings,
   wishlists,
   notifications,
+  contractors,
 } from "./db/schema";
 import { saveImage, isImageFile } from "./upload";
 import { getSessionInfo } from "@/auth";
@@ -479,6 +480,55 @@ export async function deleteListing(formData: FormData) {
   revalidatePath("/office-exclusives");
   revalidatePath("/admin/office-exclusives");
   revalidatePath("/admin/notifications");
+}
+
+// ─────────────────────────────────────────────────────────────
+// CONTRACTORS & VENDORS (admin only)
+// ─────────────────────────────────────────────────────────────
+function contractorFieldsFrom(formData: FormData) {
+  const name = str(formData, "name");
+  if (!name) throw new Error("A name is required.");
+  // Everything else is optional — stored blank rather than null so the public
+  // page can simply test for an empty string.
+  return {
+    name,
+    phone: str(formData, "phone"),
+    email: str(formData, "email"),
+    description: str(formData, "description"),
+  };
+}
+
+export async function addContractor(formData: FormData) {
+  await requireAdmin();
+  await db.insert(contractors).values({
+    ...contractorFieldsFrom(formData),
+    sortOrder: await nextSortOrder(contractors),
+  });
+  revalidateContractors();
+}
+
+export async function updateContractor(formData: FormData) {
+  await requireAdmin();
+  await db
+    .update(contractors)
+    .set(contractorFieldsFrom(formData))
+    .where(eq(contractors.id, num(formData, "id")));
+  revalidateContractors();
+}
+
+export async function deleteContractor(formData: FormData) {
+  await requireAdmin();
+  await db.delete(contractors).where(eq(contractors.id, num(formData, "id")));
+  revalidateContractors();
+}
+
+// No reorder action here on purpose: the public directory is shuffled on every
+// visit, so a manual order would have nowhere to show up. The admin list is
+// alphabetical, which is what makes an entry findable.
+
+function revalidateContractors() {
+  revalidatePath("/contractors-and-vendors");
+  revalidatePath("/admin/contractors");
 }
 
 // ─────────────────────────────────────────────────────────────
