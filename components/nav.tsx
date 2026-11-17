@@ -16,7 +16,6 @@ const brokerageResources = [
     label: "Recommendations For Marketing Materials",
     href: "/recommendations-for-marketing-materials",
   },
-  { label: "Contractors & Vendors", href: "/contractors-and-vendors" },
 ];
 
 export function Nav() {
@@ -132,6 +131,9 @@ export function Nav() {
           <NavLink href="/buyer-wishlists" solid={solid}>
             Buyer Wishlists
           </NavLink>
+          <NavLink href="/contractors-and-vendors" solid={solid}>
+            Contractors &amp; Vendors
+          </NavLink>
           <NavLink href="/faqs" solid={solid}>
             FAQs
           </NavLink>
@@ -192,6 +194,9 @@ export function Nav() {
             </li>
             <MobileLink href="/office-exclusives">Office Exclusives</MobileLink>
             <MobileLink href="/buyer-wishlists">Buyer Wishlists</MobileLink>
+            <MobileLink href="/contractors-and-vendors">
+              Contractors &amp; Vendors
+            </MobileLink>
             <MobileLink href="/faqs">FAQs</MobileLink>
             <MobileLink href="/support-staff">Support Staff</MobileLink>
           </ul>

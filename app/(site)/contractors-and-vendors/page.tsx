@@ -17,7 +17,7 @@ export default async function ContractorsAndVendorsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Brokerage Resources"
+        eyebrow="Who we work with"
         title="Contractors &amp; Vendors"
         intro="Companies and individuals the Lifstyl team works with. The list is shuffled each visit, so no one is favoured by position."
       />
