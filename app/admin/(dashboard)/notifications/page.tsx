@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const KIND_LABEL: Record<string, { text: string; tone: "new" | "warning" }> = {
   new_listing: { text: "New listing", tone: "new" },
   new_wishlist: { text: "New wishlist", tone: "new" },
+  new_open_house: { text: "New open house", tone: "new" },
   listing_expiring: { text: "Expiring soon", tone: "warning" },
   wishlist_expiring: { text: "Expiring soon", tone: "warning" },
 };

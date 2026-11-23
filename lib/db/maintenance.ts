@@ -41,6 +41,7 @@ const REQUIRED_TABLES = [
   "wishlists",
   "notifications",
   "contractors",
+  "open_houses",
 ];
 
 const REQUIRED_AGENT_COLUMNS = [
@@ -73,7 +74,7 @@ export async function getDbStatus(): Promise<DbStatus> {
 
     const cols = await sql<{ table_name: string; column_name: string }[]>`
       SELECT table_name, column_name FROM information_schema.columns
-      WHERE table_name IN ('agents', 'listings', 'wishlists', 'notifications', 'faqs', 'contractors')`;
+      WHERE table_name IN ('agents', 'listings', 'wishlists', 'notifications', 'faqs', 'contractors', 'open_houses')`;
 
     const present = new Set(cols.map((c) => c.table_name));
     base.missingTables = REQUIRED_TABLES.filter((t) => !present.has(t));
@@ -174,6 +175,33 @@ const SCHEMA_STATEMENTS: string[] = [
   `DO $$ BEGIN
      ALTER TABLE "listings" ADD CONSTRAINT "listings_agent_id_agents_id_fk"
        FOREIGN KEY ("agent_id") REFERENCES "agents"("id") ON DELETE CASCADE;
+   EXCEPTION WHEN duplicate_object THEN NULL;
+   END $$`,
+  `CREATE TABLE IF NOT EXISTS "open_houses" (
+     "id" serial PRIMARY KEY NOT NULL,
+     "agent_id" integer NOT NULL,
+     "image_url" text,
+     "street_number" text NOT NULL,
+     "street_name" text NOT NULL,
+     "city" text NOT NULL,
+     "state" text NOT NULL,
+     "zip" text NOT NULL,
+     "notes" text DEFAULT '' NOT NULL,
+     "scheduled_date" date NOT NULL,
+     "start_time" text NOT NULL,
+     "end_time" text NOT NULL,
+     "host_agent_id" integer,
+     "claimed_at" timestamp,
+     "created_at" timestamp DEFAULT now() NOT NULL
+   )`,
+  `DO $$ BEGIN
+     ALTER TABLE "open_houses" ADD CONSTRAINT "open_houses_agent_id_agents_id_fk"
+       FOREIGN KEY ("agent_id") REFERENCES "agents"("id") ON DELETE CASCADE;
+   EXCEPTION WHEN duplicate_object THEN NULL;
+   END $$`,
+  `DO $$ BEGIN
+     ALTER TABLE "open_houses" ADD CONSTRAINT "open_houses_host_agent_id_agents_id_fk"
+       FOREIGN KEY ("host_agent_id") REFERENCES "agents"("id") ON DELETE SET NULL;
    EXCEPTION WHEN duplicate_object THEN NULL;
    END $$`,
   `CREATE TABLE IF NOT EXISTS "contractors" (

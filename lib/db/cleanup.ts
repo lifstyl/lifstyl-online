@@ -1,11 +1,14 @@
 import "server-only";
-import { and, gt, lte } from "drizzle-orm";
+import { and, gt, lte, sql } from "drizzle-orm";
 import { db } from "./index";
 import {
   listings,
   wishlists,
   agents,
+  openHouses,
   EXPIRY_WARNING_DAYS,
+  OPEN_HOUSE_TTL_DAYS,
+  OFFICE_TIMEZONE,
 } from "./schema";
 import { eq } from "drizzle-orm";
 import { expiryCutoff, daysUntilExpiry } from "../expiry";
@@ -14,6 +17,7 @@ import { notifyAdmin, pruneNotificationsFor } from "../notify";
 export type CleanupResult = {
   listingsDeleted: number;
   wishlistsDeleted: number;
+  openHousesDeleted: number;
   warningsRaised: number;
 };
 
@@ -26,8 +30,31 @@ export async function runCleanup(now: Date = new Date()): Promise<CleanupResult>
   const result: CleanupResult = {
     listingsDeleted: 0,
     wishlistsDeleted: 0,
+    openHousesDeleted: 0,
     warningsRaised: 0,
   };
+
+  // ── Open houses: finished, or unclaimed and past their 7 days ──
+  // Mirrors the filter the board itself uses, so the two can't disagree about
+  // what's still live.
+  const staleOpenHouses = await db
+    .select({ id: openHouses.id })
+    .from(openHouses)
+    .where(
+      sql`(${openHouses.scheduledDate} + ${openHouses.endTime}::time)
+            <= (now() AT TIME ZONE ${sql.raw(`'${OFFICE_TIMEZONE}'`)})
+          OR (${openHouses.hostAgentId} IS NULL
+              AND ${openHouses.createdAt}
+                  <= now() - interval '${sql.raw(String(OPEN_HOUSE_TTL_DAYS))} days')`
+    );
+  if (staleOpenHouses.length) {
+    const ids = staleOpenHouses.map((r) => r.id);
+    for (const id of ids) {
+      await db.delete(openHouses).where(eq(openHouses.id, id));
+    }
+    await pruneNotificationsFor(["new_open_house"], ids);
+    result.openHousesDeleted = ids.length;
+  }
 
   // ── Delete what's past its lifetime ─────────────────────
   const staleListings = await db

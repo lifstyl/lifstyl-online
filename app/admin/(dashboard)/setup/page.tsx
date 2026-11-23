@@ -95,6 +95,15 @@ export default async function AdminSetupPage({
               }
             />
             <Row
+              label="Open house board"
+              ok={!status.missingTables.includes("open_houses")}
+              value={
+                status.missingTables.includes("open_houses")
+                  ? "missing"
+                  : "ready"
+              }
+            />
+            <Row
               label="Contractors &amp; vendors"
               ok={!status.missingTables.includes("contractors")}
               value={

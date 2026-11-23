@@ -43,6 +43,13 @@
       "when": 1794935011417,
       "tag": "0005_lucky_vision",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795461489752,
+      "tag": "0006_sudden_lester",
+      "breakpoints": true
     }
   ]
 }

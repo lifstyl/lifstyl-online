@@ -7,6 +7,7 @@ import {
   boolean,
   doublePrecision,
   unique,
+  date,
 } from "drizzle-orm/pg-core";
 
 /**
@@ -16,6 +17,15 @@ import {
 export const LISTING_TTL_DAYS = 30;
 export const WISHLIST_TTL_DAYS = 90;
 export const EXPIRY_WARNING_DAYS = 7;
+
+/**
+ * An unclaimed open house drops off after this long. Once a host takes it, it
+ * instead stays up until the open house itself has finished.
+ */
+export const OPEN_HOUSE_TTL_DAYS = 7;
+
+/** The office's timezone, used to decide when an open house has concluded. */
+export const OFFICE_TIMEZONE = "America/New_York";
 
 /**
  * Homepage hero carousel images. Ordered by `sortOrder`.
@@ -164,6 +174,42 @@ export type Testimonial = typeof testimonials.$inferSelect;
 export type Faq = typeof faqs.$inferSelect;
 export type StaffMember = typeof staffMembers.$inferSelect;
 /**
+ * Open house board — a listing agent posts a property with a fixed date and
+ * time window, and another agent takes it to host.
+ *
+ * The date and times are stored as plain calendar/clock values rather than
+ * timestamps on purpose. The server runs in UTC while the office is Eastern,
+ * so a timestamp round-trip would shift "2–4pm" by several hours; these
+ * columns give back exactly what the agent typed. Conclusion is judged by
+ * comparing them against the current time in OFFICE_TIMEZONE.
+ */
+export const openHouses = pgTable("open_houses", {
+  id: serial("id").primaryKey(),
+  // The listing agent who posted it.
+  agentId: integer("agent_id")
+    .notNull()
+    .references(() => agents.id, { onDelete: "cascade" }),
+  imageUrl: text("image_url"),
+  streetNumber: text("street_number").notNull(),
+  streetName: text("street_name").notNull(),
+  city: text("city").notNull(),
+  state: text("state").notNull(),
+  zip: text("zip").notNull(),
+  notes: text("notes").notNull().default(""),
+  // "2026-11-23", "14:00", "16:00"
+  scheduledDate: date("scheduled_date").notNull(),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time").notNull(),
+  // Null means nobody has taken it yet — this is what "claimed" is derived
+  // from, so a removed agent simply frees the slot again.
+  hostAgentId: integer("host_agent_id").references(() => agents.id, {
+    onDelete: "set null",
+  }),
+  claimedAt: timestamp("claimed_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+/**
  * Buyer wishlists — free-text "my buyer is looking for…" posts from agents.
  * Removed automatically once they pass WISHLIST_TTL_DAYS.
  */
@@ -209,6 +255,13 @@ export type PageContentRow = typeof pageContent.$inferSelect;
 export type Agent = typeof agents.$inferSelect;
 export type Listing = typeof listings.$inferSelect;
 export type Wishlist = typeof wishlists.$inferSelect;
+export type OpenHouse = typeof openHouses.$inferSelect;
+
+/** An open house with the names of the posting agent and, if taken, the host. */
+export type OpenHouseWithAgents = OpenHouse & {
+  agentName: string;
+  hostName: string | null;
+};
 export type Notification = typeof notifications.$inferSelect;
 
 /** A listing joined with its posting agent's name (phone is never included). */

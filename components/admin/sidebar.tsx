@@ -12,6 +12,7 @@ const links = [
   { href: "/admin/community-sponsorship", label: "Community Sponsorship" },
   { href: "/admin/contractors", label: "Contractors & Vendors" },
   { href: "/admin/office-exclusives", label: "Office Exclusives" },
+  { href: "/admin/open-house-board", label: "Open House Board" },
   { href: "/admin/exclusive-agents", label: "Exclusive Agents" },
   { href: "/admin/marketing-materials", label: "Marketing Materials" },
   { href: "/admin/support-staff", label: "Support Staff" },

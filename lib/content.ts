@@ -1,6 +1,7 @@
 import "server-only";
-import { asc, desc, eq, and, gt, isNull, sql } from "drizzle-orm";
+import { asc, desc, eq, and, or, gt, isNull, isNotNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { db } from "./db";
 import {
@@ -15,11 +16,15 @@ import {
   wishlists,
   notifications,
   contractors,
+  openHouses,
+  OPEN_HOUSE_TTL_DAYS,
+  OFFICE_TIMEZONE,
 } from "./db/schema";
 import type {
   ListingWithAgent,
   WishlistWithAgent,
   Contractor,
+  OpenHouseWithAgents,
 } from "./db/schema";
 import { expiryCutoff } from "./expiry";
 
@@ -191,6 +196,57 @@ export async function getWishlists(): Promise<WishlistWithAgent[]> {
     .orderBy(desc(wishlists.createdAt));
 
   return rows.map((r) => ({ ...r.wishlist, agentName: r.agentName }));
+}
+
+/**
+ * Open houses still worth showing, soonest first.
+ *
+ * A post drops off once its window has finished, and an unclaimed one also
+ * drops off after OPEN_HOUSE_TTL_DAYS — whichever comes first. Taking it only
+ * removes the 7-day limit; a slot whose time has passed is no use to anyone
+ * either way.
+ *
+ * Conclusion is judged in the office's timezone. The scheduled values are
+ * plain calendar/clock values, so they're compared against `now()` converted
+ * to that zone rather than to the server's UTC clock, which would otherwise
+ * leave finished open houses up for several hours.
+ */
+export async function getOpenHouses(): Promise<OpenHouseWithAgents[] | null> {
+  const host = alias(agents, "host_agent");
+  try {
+    const rows = await db
+      .select({
+        openHouse: openHouses,
+        agentName: agents.name,
+        hostName: host.name,
+      })
+      .from(openHouses)
+      .innerJoin(agents, eq(openHouses.agentId, agents.id))
+      .leftJoin(host, eq(openHouses.hostAgentId, host.id))
+      .where(
+        and(
+          sql`(${openHouses.scheduledDate} + ${openHouses.endTime}::time)
+              > (now() AT TIME ZONE ${sql.raw(`'${OFFICE_TIMEZONE}'`)})`,
+          or(
+            isNotNull(openHouses.hostAgentId),
+            gt(
+              openHouses.createdAt,
+              sql.raw(`now() - interval '${OPEN_HOUSE_TTL_DAYS} days'`)
+            )
+          )
+        )
+      )
+      .orderBy(asc(openHouses.scheduledDate), asc(openHouses.startTime));
+
+    return rows.map((r) => ({
+      ...r.openHouse,
+      agentName: r.agentName,
+      hostName: r.hostName,
+    }));
+  } catch (err) {
+    if (isUndefinedTable(err)) return null;
+    throw err;
+  }
 }
 
 /** Newest first, unread before read, for the admin bell. */

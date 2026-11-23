@@ -6,6 +6,7 @@ import { notifications } from "./db/schema";
 export type NotificationKind =
   | "new_listing"
   | "new_wishlist"
+  | "new_open_house"
   | "listing_expiring"
   | "wishlist_expiring";
 

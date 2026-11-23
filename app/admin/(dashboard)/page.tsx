@@ -37,6 +37,11 @@ const cards = [
     desc: "Every listing agents have posted. Edit or remove any of them.",
   },
   {
+    href: "/admin/open-house-board",
+    title: "Open House Board",
+    desc: "Open houses agents have posted, and who picked them up.",
+  },
+  {
     href: "/admin/exclusive-agents",
     title: "Exclusive Agents",
     desc: "Who can sign in to post listings. Add agents, reset phone numbers, or revoke access.",

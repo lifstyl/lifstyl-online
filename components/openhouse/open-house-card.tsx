@@ -1,0 +1,121 @@
+"use client";
+
+import type { OpenHouseWithAgents } from "@/lib/db/schema";
+import {
+  claimOpenHouse,
+  releaseOpenHouse,
+  deleteOpenHouse,
+} from "@/lib/actions";
+import { SubmitButton } from "@/components/admin/ui";
+
+export function OpenHouseCard({
+  openHouse,
+  when,
+  isMine,
+  isHost,
+  canRemove,
+}: {
+  openHouse: OpenHouseWithAgents;
+  /** Preformatted on the server so both sides render the same wording. */
+  when: string;
+  /** The signed-in agent posted this listing. */
+  isMine: boolean;
+  /** The signed-in agent is hosting it. */
+  isHost: boolean;
+  canRemove: boolean;
+}) {
+  const taken = openHouse.hostAgentId !== null;
+
+  return (
+    <article className="flex flex-col overflow-hidden rounded-sm border border-border bg-pure-white">
+      {openHouse.imageUrl && (
+        <div className="aspect-[4/3] w-full bg-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={openHouse.imageUrl}
+            alt={`${openHouse.streetNumber} ${openHouse.streetName}`}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      )}
+
+      <div className="flex flex-1 flex-col p-6">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <h3 className="font-serif text-xl leading-tight text-navy">
+            {openHouse.streetNumber} {openHouse.streetName}
+          </h3>
+          <span
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+              taken
+                ? "bg-navy/10 text-navy"
+                : "bg-gold/15 text-[color:var(--gold)]"
+            }`}
+          >
+            {taken ? "Hosted" : "Needs a host"}
+          </span>
+        </div>
+        <p className="mt-1 text-sm text-text-body">
+          {openHouse.city}, {openHouse.state} {openHouse.zip}
+        </p>
+
+        <p className="mt-4 border-y border-border py-3 font-serif text-lg text-navy">
+          {when}
+        </p>
+
+        {openHouse.notes && (
+          <p className="mt-4 whitespace-pre-line text-sm leading-relaxed text-text-body">
+            {openHouse.notes}
+          </p>
+        )}
+
+        <div className="mt-auto pt-5 text-sm text-text-muted">
+          <p>
+            Listed by{" "}
+            <span className="font-medium text-navy">{openHouse.agentName}</span>
+            {isMine && " (you)"}
+          </p>
+          {taken && (
+            <p className="mt-0.5">
+              Hosted by{" "}
+              <span className="font-medium text-navy">
+                {openHouse.hostName}
+              </span>
+              {isHost && " (you)"}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+          {/* The poster doesn't get a take button — they're looking for someone
+              else to cover it. */}
+          {!taken && !isMine && (
+            <form action={claimOpenHouse}>
+              <input type="hidden" name="id" value={openHouse.id} />
+              <SubmitButton>I&apos;ll host it</SubmitButton>
+            </form>
+          )}
+
+          {!taken && isMine && (
+            <p className="text-sm text-text-muted">
+              Waiting for someone to pick this up.
+            </p>
+          )}
+
+          {isHost && (
+            <form action={releaseOpenHouse}>
+              <input type="hidden" name="id" value={openHouse.id} />
+              <SubmitButton variant="ghost">Give it up</SubmitButton>
+            </form>
+          )}
+
+          {canRemove && (
+            <form action={deleteOpenHouse} className="ml-auto">
+              <input type="hidden" name="id" value={openHouse.id} />
+              <SubmitButton variant="danger">Remove</SubmitButton>
+            </form>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}

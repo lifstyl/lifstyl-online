@@ -18,6 +18,16 @@ const brokerageResources = [
   },
 ];
 
+/**
+ * The three agent-only boards share a dropdown. They're grouped rather than
+ * listed flat so the top row doesn't outgrow the width available on a laptop.
+ */
+const agentBoards = [
+  { label: "Office Exclusives", href: "/office-exclusives" },
+  { label: "Buyer Wishlists", href: "/buyer-wishlists" },
+  { label: "Open House Board", href: "/open-house-board" },
+];
+
 export function Nav() {
   const pathname = usePathname();
   // Home has a full-height dark hero, so the nav sits transparent over it and
@@ -27,7 +37,8 @@ export function Nav() {
 
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [resourcesOpen, setResourcesOpen] = useState(false);
+  // Which dropdown is open, by key — only one at a time.
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
 
   useEffect(() => {
     if (!transparentAtTop) return;
@@ -69,7 +80,7 @@ export function Nav() {
         {/* Desktop links */}
         <ul
           className={[
-            "hidden items-center gap-8 md:flex",
+            "hidden items-center gap-8 lg:flex",
             solid ? "text-navy" : "text-pure-white",
           ].join(" ")}
         >
@@ -77,60 +88,20 @@ export function Nav() {
             Home
           </NavLink>
 
-          {/* Brokerage Resources dropdown */}
-          <li
-            className="relative"
-            onMouseEnter={() => setResourcesOpen(true)}
-            onMouseLeave={() => setResourcesOpen(false)}
-          >
-            <button
-              type="button"
-              className="flex items-center gap-1.5 text-sm font-medium tracking-wide opacity-95 transition hover:opacity-100"
-              aria-expanded={resourcesOpen}
-              aria-haspopup="true"
-              onClick={() => setResourcesOpen((o) => !o)}
-            >
-              Brokerage Resources
-              <svg
-                width="10"
-                height="6"
-                viewBox="0 0 10 6"
-                fill="none"
-                className={`transition-transform ${resourcesOpen ? "rotate-180" : ""}`}
-                aria-hidden="true"
-              >
-                <path
-                  d="M1 1l4 4 4-4"
-                  stroke="currentColor"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-              </svg>
-            </button>
-            {resourcesOpen && (
-              <ul className="absolute left-1/2 top-full w-72 -translate-x-1/2 pt-4">
-                <div className="overflow-hidden rounded-sm border border-border bg-pure-white shadow-xl">
-                  {brokerageResources.map((item) => (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        className="block border-b border-border/60 px-5 py-3 text-sm text-text-body transition last:border-b-0 hover:bg-white hover:text-navy"
-                      >
-                        {item.label}
-                      </Link>
-                    </li>
-                  ))}
-                </div>
-              </ul>
-            )}
-          </li>
+          <NavDropdown
+            label="Brokerage Resources"
+            items={brokerageResources}
+            isOpen={openMenu === "resources"}
+            onOpen={(o) => setOpenMenu(o ? "resources" : null)}
+          />
 
-          <NavLink href="/office-exclusives" solid={solid}>
-            Office Exclusives
-          </NavLink>
-          <NavLink href="/buyer-wishlists" solid={solid}>
-            Buyer Wishlists
-          </NavLink>
+          <NavDropdown
+            label="Agent Boards"
+            items={agentBoards}
+            isOpen={openMenu === "boards"}
+            onOpen={(o) => setOpenMenu(o ? "boards" : null)}
+          />
+
           <NavLink href="/contractors-and-vendors" solid={solid}>
             Contractors &amp; Vendors
           </NavLink>
@@ -145,7 +116,7 @@ export function Nav() {
         {/* Mobile toggle */}
         <button
           type="button"
-          className={`md:hidden ${solid ? "text-navy" : "text-pure-white"}`}
+          className={`lg:hidden ${solid ? "text-navy" : "text-pure-white"}`}
           aria-label="Toggle menu"
           aria-expanded={mobileOpen}
           onClick={() => setMobileOpen((o) => !o)}
@@ -172,7 +143,7 @@ export function Nav() {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="border-t border-border bg-pure-white md:hidden">
+        <div className="border-t border-border bg-pure-white lg:hidden">
           <ul className="mx-auto flex max-w-content flex-col px-6 py-3 text-navy">
             <MobileLink href="/">Home</MobileLink>
             <li className="py-1">
@@ -192,8 +163,23 @@ export function Nav() {
                 ))}
               </ul>
             </li>
-            <MobileLink href="/office-exclusives">Office Exclusives</MobileLink>
-            <MobileLink href="/buyer-wishlists">Buyer Wishlists</MobileLink>
+            <li className="py-1">
+              <p className="px-1 py-2 text-xs font-semibold uppercase tracking-widest text-text-muted">
+                Agent Boards
+              </p>
+              <ul className="flex flex-col">
+                {agentBoards.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="block px-4 py-2.5 text-sm text-text-body hover:text-navy"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </li>
             <MobileLink href="/contractors-and-vendors">
               Contractors &amp; Vendors
             </MobileLink>
@@ -203,6 +189,68 @@ export function Nav() {
         </div>
       )}
     </header>
+  );
+}
+
+/** A top-level nav item that opens a panel of links. */
+function NavDropdown({
+  label,
+  items,
+  isOpen,
+  onOpen,
+}: {
+  label: string;
+  items: { label: string; href: string }[];
+  isOpen: boolean;
+  onOpen: (open: boolean) => void;
+}) {
+  return (
+    <li
+      className="relative"
+      onMouseEnter={() => onOpen(true)}
+      onMouseLeave={() => onOpen(false)}
+    >
+      <button
+        type="button"
+        className="flex items-center gap-1.5 text-sm font-medium tracking-wide opacity-95 transition hover:opacity-100"
+        aria-expanded={isOpen}
+        aria-haspopup="true"
+        onClick={() => onOpen(!isOpen)}
+      >
+        {label}
+        <svg
+          width="10"
+          height="6"
+          viewBox="0 0 10 6"
+          fill="none"
+          className={`transition-transform ${isOpen ? "rotate-180" : ""}`}
+          aria-hidden="true"
+        >
+          <path
+            d="M1 1l4 4 4-4"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+      {isOpen && (
+        <ul className="absolute left-1/2 top-full w-72 -translate-x-1/2 pt-4">
+          <div className="overflow-hidden rounded-sm border border-border bg-pure-white shadow-xl">
+            {items.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className="block border-b border-border/60 px-5 py-3 text-sm text-text-body transition last:border-b-0 hover:bg-white hover:text-navy"
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </div>
+        </ul>
+      )}
+    </li>
   );
 }
 

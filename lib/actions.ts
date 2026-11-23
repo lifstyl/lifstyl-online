@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, asc, eq, sql, isNull } from "drizzle-orm";
+import { validateWindow, todayInOffice, formatWindow } from "./schedule";
 import { db } from "./db";
 import {
   carouselImages,
@@ -16,6 +17,8 @@ import {
   wishlists,
   notifications,
   contractors,
+  openHouses,
+  OFFICE_TIMEZONE,
 } from "./db/schema";
 import { saveImage, isImageFile } from "./upload";
 import { getSessionInfo } from "@/auth";
@@ -479,6 +482,137 @@ export async function deleteListing(formData: FormData) {
   await pruneNotificationsFor(["new_listing", "listing_expiring"], [id]);
   revalidatePath("/office-exclusives");
   revalidatePath("/admin/office-exclusives");
+  revalidatePath("/admin/notifications");
+}
+
+// ─────────────────────────────────────────────────────────────
+// OPEN HOUSE BOARD
+// ─────────────────────────────────────────────────────────────
+export async function addOpenHouse(formData: FormData) {
+  const info = await requireExclusivesAccess();
+  if (!info.agentId) throw new Error("Only agents can post an open house.");
+
+  const scheduledDate = str(formData, "scheduledDate");
+  const startTime = str(formData, "startTime");
+  const endTime = str(formData, "endTime");
+
+  const problem = validateWindow(
+    scheduledDate,
+    startTime,
+    endTime,
+    todayInOffice(OFFICE_TIMEZONE)
+  );
+  if (problem) throw new Error(problem);
+
+  const address = {
+    streetNumber: str(formData, "streetNumber"),
+    streetName: str(formData, "streetName"),
+    city: str(formData, "city"),
+    state: str(formData, "state").toUpperCase(),
+    zip: str(formData, "zip"),
+  };
+  if (Object.values(address).some((v) => !v)) {
+    throw new Error("Please fill in the full property address.");
+  }
+
+  const file = formData.get("image");
+  const imageUrl = isImageFile(file) ? await saveImage(file) : null;
+
+  const [created] = await db
+    .insert(openHouses)
+    .values({
+      agentId: info.agentId,
+      imageUrl,
+      ...address,
+      notes: str(formData, "notes"),
+      scheduledDate,
+      startTime,
+      endTime,
+    })
+    .returning({ id: openHouses.id });
+
+  await notifyAdmin({
+    kind: "new_open_house",
+    entityId: created.id,
+    title: "New Open House post",
+    detail: `${info.name}: ${address.streetNumber} ${address.streetName}, ${address.city} — ${formatWindow(scheduledDate, startTime, endTime)}`,
+    href: "/open-house-board",
+  });
+
+  revalidateOpenHouses();
+}
+
+/**
+ * Take an open house to host. First come, first served — the host accepts the
+ * window exactly as posted, so there's nothing for the listing agent to
+ * approve.
+ */
+export async function claimOpenHouse(formData: FormData) {
+  const info = await requireExclusivesAccess();
+  if (!info.agentId) throw new Error("Only agents can host an open house.");
+  const id = num(formData, "id");
+
+  // Conditional update: only claims a row that's still free, so two agents
+  // clicking at the same moment can't both end up as host.
+  const claimed = await db
+    .update(openHouses)
+    .set({ hostAgentId: info.agentId, claimedAt: new Date() })
+    .where(and(eq(openHouses.id, id), isNull(openHouses.hostAgentId)))
+    .returning({ id: openHouses.id });
+
+  if (claimed.length === 0) {
+    throw new Error("Someone else already took this one.");
+  }
+  revalidateOpenHouses();
+}
+
+/** Give back an open house you'd taken, putting it back on the board. */
+export async function releaseOpenHouse(formData: FormData) {
+  const info = await requireExclusivesAccess();
+  const id = num(formData, "id");
+
+  const existing = await db
+    .select()
+    .from(openHouses)
+    .where(eq(openHouses.id, id))
+    .limit(1);
+  if (!existing[0]) return;
+
+  const isHost = existing[0].hostAgentId === info.agentId;
+  if (!isHost && !info.canManageAllListings) {
+    throw new Error("Only the host can give this one up.");
+  }
+
+  await db
+    .update(openHouses)
+    .set({ hostAgentId: null, claimedAt: null })
+    .where(eq(openHouses.id, id));
+  revalidateOpenHouses();
+}
+
+export async function deleteOpenHouse(formData: FormData) {
+  const info = await requireExclusivesAccess();
+  const id = num(formData, "id");
+
+  const existing = await db
+    .select()
+    .from(openHouses)
+    .where(eq(openHouses.id, id))
+    .limit(1);
+  if (!existing[0]) return;
+  // The agent who posted it, or a manager/admin.
+  if (!info.canManageAllListings && existing[0].agentId !== info.agentId) {
+    throw new Error("You can only remove your own open house posts.");
+  }
+
+  await db.delete(openHouses).where(eq(openHouses.id, id));
+  await pruneNotificationsFor(["new_open_house"], [id]);
+  revalidateOpenHouses();
+}
+
+function revalidateOpenHouses() {
+  revalidatePath("/open-house-board");
+  revalidatePath("/admin/open-house-board");
   revalidatePath("/admin/notifications");
 }
 
