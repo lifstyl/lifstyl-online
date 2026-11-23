@@ -23,7 +23,11 @@ export default async function OpenHouseBoardPage({
   const signedIn = !!session && (session.isAgent || session.isAdmin);
 
   // Only queried once there's a session, so nothing reaches a logged-out visitor.
-  const openHouses = signedIn ? ((await getOpenHouses()) ?? []) : [];
+  // null means the table isn't there yet, which is different from an empty
+  // board: posting would fail, so the form is withheld rather than offered.
+  const rows = signedIn ? await getOpenHouses() : [];
+  const notSetUp = rows === null;
+  const openHouses = rows ?? [];
 
   return (
     <>
@@ -52,7 +56,16 @@ export default async function OpenHouseBoardPage({
                 redirectTo={PATH}
               />
 
-              {session.isAgent ? (
+              {notSetUp ? (
+                <div className="mb-10 rounded-sm border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+                  <p className="font-medium">The board isn&apos;t ready yet</p>
+                  <p className="mt-1">
+                    {session.isAdmin
+                      ? "Run “Update database” on the Setup page to finish setting it up."
+                      : "An admin needs to finish setting this up. Check back shortly."}
+                  </p>
+                </div>
+              ) : session.isAgent ? (
                 <AddOpenHousePanel today={todayInOffice(OFFICE_TIMEZONE)} />
               ) : (
                 <p className="mb-10 rounded-sm border border-border bg-pure-white px-5 py-4 text-sm text-text-body">
@@ -85,7 +98,7 @@ export default async function OpenHouseBoardPage({
                     />
                   ))}
                 </div>
-              ) : (
+              ) : notSetUp ? null : (
                 <div className="rounded-sm border border-dashed border-border bg-pure-white p-10 text-center">
                   <p className="font-serif text-xl text-navy">
                     Nothing on the board
