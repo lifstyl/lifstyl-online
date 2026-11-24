@@ -1,12 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import type { OpenHouseWithAgents } from "@/lib/db/schema";
 import {
   claimOpenHouse,
   releaseOpenHouse,
   deleteOpenHouse,
+  updateOpenHouse,
 } from "@/lib/actions";
 import { SubmitButton } from "@/components/admin/ui";
+import { OpenHouseFields } from "./open-house-fields";
 
 export function OpenHouseCard({
   openHouse,
@@ -14,6 +17,7 @@ export function OpenHouseCard({
   isMine,
   isHost,
   canRemove,
+  today,
 }: {
   openHouse: OpenHouseWithAgents;
   /** Preformatted on the server so both sides render the same wording. */
@@ -23,8 +27,52 @@ export function OpenHouseCard({
   /** The signed-in agent is hosting it. */
   isHost: boolean;
   canRemove: boolean;
+  /** Today in the office timezone, for the edit form's date picker. */
+  today: string;
 }) {
   const taken = openHouse.hostAgentId !== null;
+  const [editing, setEditing] = useState(false);
+
+  if (editing) {
+    return (
+      <article className="rounded-sm border border-border border-t-2 border-t-gold bg-pure-white p-6">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <h3 className="font-serif text-lg text-navy">Edit open house</h3>
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="text-sm text-text-muted underline-offset-2 hover:text-navy hover:underline"
+          >
+            Cancel
+          </button>
+        </div>
+
+        {/* Nothing notifies the host, so make the consequence visible rather
+            than letting the window change quietly under them. */}
+        {taken && (
+          <p className="mb-5 rounded-sm border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {openHouse.hostName} is hosting this one. If you change the date or
+            time, let them know yourself — they won&apos;t be told
+            automatically.
+          </p>
+        )}
+
+        <form
+          action={async (formData) => {
+            await updateOpenHouse(formData);
+            setEditing(false);
+          }}
+          className="flex flex-col gap-5"
+        >
+          <input type="hidden" name="id" value={openHouse.id} />
+          <OpenHouseFields openHouse={openHouse} today={today} />
+          <div>
+            <SubmitButton>Save changes</SubmitButton>
+          </div>
+        </form>
+      </article>
+    );
+  }
 
   return (
     <article className="flex flex-col overflow-hidden rounded-sm border border-border bg-pure-white">
@@ -99,6 +147,17 @@ export function OpenHouseCard({
             <p className="text-sm text-text-muted">
               Waiting for someone to pick this up.
             </p>
+          )}
+
+          {/* Only the agent who posted it can change the details. */}
+          {isMine && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="rounded-sm border border-border px-3 py-1.5 text-sm text-text-body transition hover:bg-white"
+            >
+              Edit
+            </button>
           )}
 
           {isHost && (

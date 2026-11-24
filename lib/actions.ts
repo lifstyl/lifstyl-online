@@ -543,6 +543,63 @@ export async function addOpenHouse(formData: FormData) {
 }
 
 /**
+ * Edit a post. Restricted to the agent who posted it — a manager can remove
+ * someone else's post but not rewrite it, since the address and window are
+ * claims about their seller's property.
+ */
+export async function updateOpenHouse(formData: FormData) {
+  const info = await requireExclusivesAccess();
+  const id = num(formData, "id");
+
+  const existing = await db
+    .select()
+    .from(openHouses)
+    .where(eq(openHouses.id, id))
+    .limit(1);
+  if (!existing[0]) throw new Error("That open house is no longer on the board.");
+  if (existing[0].agentId !== info.agentId) {
+    throw new Error("You can only edit open houses you posted.");
+  }
+
+  const scheduledDate = str(formData, "scheduledDate");
+  const startTime = str(formData, "startTime");
+  const endTime = str(formData, "endTime");
+
+  const problem = validateWindow(
+    scheduledDate,
+    startTime,
+    endTime,
+    todayInOffice(OFFICE_TIMEZONE)
+  );
+  if (problem) throw new Error(problem);
+
+  const address = {
+    streetNumber: str(formData, "streetNumber"),
+    streetName: str(formData, "streetName"),
+    city: str(formData, "city"),
+    state: str(formData, "state").toUpperCase(),
+    zip: str(formData, "zip"),
+  };
+  if (Object.values(address).some((v) => !v)) {
+    throw new Error("Please fill in the full property address.");
+  }
+
+  const file = formData.get("image");
+  const values: Record<string, unknown> = {
+    ...address,
+    notes: str(formData, "notes"),
+    scheduledDate,
+    startTime,
+    endTime,
+  };
+  // Only replace the photo when a new one was actually chosen.
+  if (isImageFile(file)) values.imageUrl = await saveImage(file);
+
+  await db.update(openHouses).set(values).where(eq(openHouses.id, id));
+  revalidateOpenHouses();
+}
+
+/**
  * Take an open house to host. First come, first served — the host accepts the
  * window exactly as posted, so there's nothing for the listing agent to
  * approve.

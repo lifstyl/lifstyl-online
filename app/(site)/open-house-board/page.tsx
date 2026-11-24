@@ -95,6 +95,7 @@ export default async function OpenHouseBoardPage({
                         session.canManageAllListings ||
                         oh.agentId === session.agentId
                       }
+                      today={todayInOffice(OFFICE_TIMEZONE)}
                     />
                   ))}
                 </div>
