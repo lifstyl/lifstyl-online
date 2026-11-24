@@ -16,6 +16,8 @@ export function OpenHouseCard({
   when,
   isMine,
   isHost,
+  canHost,
+  canEdit,
   canRemove,
   today,
 }: {
@@ -26,6 +28,10 @@ export function OpenHouseCard({
   isMine: boolean;
   /** The signed-in agent is hosting it. */
   isHost: boolean;
+  /** Signed in as an agent, so hosting is actually possible. The admin has no
+   *  agent record and can't host — offering them the button would just fail. */
+  canHost: boolean;
+  canEdit: boolean;
   canRemove: boolean;
   /** Today in the office timezone, for the edit form's date picker. */
   today: string;
@@ -135,8 +141,9 @@ export function OpenHouseCard({
 
         <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
           {/* The poster doesn't get a take button — they're looking for someone
-              else to cover it. */}
-          {!taken && !isMine && (
+              else to cover it — and neither does the admin, who has no agent
+              record to host with. */}
+          {!taken && !isMine && canHost && (
             <form action={claimOpenHouse}>
               <input type="hidden" name="id" value={openHouse.id} />
               <SubmitButton>I&apos;ll host it</SubmitButton>
@@ -149,8 +156,7 @@ export function OpenHouseCard({
             </p>
           )}
 
-          {/* Only the agent who posted it can change the details. */}
-          {isMine && (
+          {canEdit && (
             <button
               type="button"
               onClick={() => setEditing(true)}

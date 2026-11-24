@@ -91,6 +91,11 @@ export default async function OpenHouseBoardPage({
                         oh.hostAgentId !== null &&
                         oh.hostAgentId === session.agentId
                       }
+                      canHost={session.isAgent}
+                      canEdit={
+                        session.canManageAllListings ||
+                        oh.agentId === session.agentId
+                      }
                       canRemove={
                         session.canManageAllListings ||
                         oh.agentId === session.agentId

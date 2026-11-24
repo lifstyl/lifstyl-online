@@ -543,9 +543,12 @@ export async function addOpenHouse(formData: FormData) {
 }
 
 /**
- * Edit a post. Restricted to the agent who posted it — a manager can remove
- * someone else's post but not rewrite it, since the address and window are
- * claims about their seller's property.
+ * Edit a post: the agent who posted it, or a manager/admin.
+ *
+ * Managers are included because the site owner signs in as the admin, which
+ * has no agent record — so a poster-only rule left them unable to correct
+ * anything on the board, including their own post made from their agent
+ * account. Rank-and-file agents still can't touch each other's posts.
  */
 export async function updateOpenHouse(formData: FormData) {
   const info = await requireExclusivesAccess();
@@ -557,7 +560,7 @@ export async function updateOpenHouse(formData: FormData) {
     .where(eq(openHouses.id, id))
     .limit(1);
   if (!existing[0]) throw new Error("That open house is no longer on the board.");
-  if (existing[0].agentId !== info.agentId) {
+  if (!info.canManageAllListings && existing[0].agentId !== info.agentId) {
     throw new Error("You can only edit open houses you posted.");
   }
 
